@@ -5,9 +5,10 @@
   const C = root.EVOLVE_LAB_CONTENT || (typeof require === "function" ? require("./stages.js") : null);
   const { FILES, SLOTS, STAGES, ASSETS } = C;
 
-  // Score out of 100: up to 80 for the code (accuracy), up to 20 for speed.
-  // Wrong block −2, paid hint −1 (code part floors at 0). Time: full 20 at ≤ 4:00, falling to 0 at 10:00.
-  const POINTS = { max: 100, codeMax: 80, timeMax: 20, mistake: 2, hint: 1, fastSeconds: 240, slowSeconds: 600,
+  // Score out of 100: up to 60 for the code (accuracy), up to 40 for speed.
+  // Code starts at 0 and climbs as lines are filled (all 27 lines = 60). Wrong block −1, paid hint −1 (floors at 0).
+  // Speed: full 40 at ≤ 4:00, falling to 0 at 10:00, added when you finish.
+  const POINTS = { max: 100, codeMax: 60, timeMax: 40, mistake: 1, hint: 1, fastSeconds: 240, slowSeconds: 600,
     coin: 50, crash: 40, perMetre: 1 };
 
   function cleanName(name) {
@@ -175,6 +176,8 @@
     return Math.max(0, Math.round(raw * (spicy ? 1.25 : 1)));
   }
 
+  const TOTAL_SLOTS = STAGES.reduce((n, _s, i) => n + stageSlots(i).length, 0);
+
   function timeBonus(seconds) {
     const t = (POINTS.slowSeconds - seconds) / (POINTS.slowSeconds - POINTS.fastSeconds);
     return Math.round(POINTS.timeMax * Math.max(0, Math.min(1, t)));
@@ -183,9 +186,13 @@
   function score(state, nowSeconds) {
     const mistakes = state.stagePoints.reduce((sum, p) => sum + p.mistakes, 0);
     const hints = state.stagePoints.reduce((sum, p) => sum + p.hints, 0);
-    const code = Math.max(0, POINTS.codeMax - mistakes * POINTS.mistake - hints * POINTS.hint);
+    // lines filled so far (removing and re-adding a block never earns twice)
+    let filled = 0;
+    for (let i = 0; i <= state.stage && i < STAGES.length; i++) filled += stageSlots(i).filter((id) => state.fills[id]).length;
+    const earned = Math.round(POINTS.codeMax * filled / TOTAL_SLOTS);
+    const code = Math.max(0, earned - mistakes * POINTS.mistake - hints * POINTS.hint);
     const time = state.finished ? timeBonus(nowSeconds == null ? 0 : nowSeconds) : 0;
-    return { code, time, mistakes, hints, total: code + time };
+    return { code, time, mistakes, hints, filled, total: code + time };
   }
 
   function compareEntries(a, b) {
@@ -195,7 +202,7 @@
   }
 
   const api = { POINTS, cleanName, createState, tileById, stageSlots, currentSlot, isStageComplete, place, removeFill, nextHint,
-    fileLines, fileText, visibleFiles, runtimeConfig, buildDocument, runPoints, score, timeBonus, compareEntries, chosen };
+    fileLines, fileText, visibleFiles, runtimeConfig, buildDocument, runPoints, score, timeBonus, TOTAL_SLOTS, compareEntries, chosen };
   root.EVOLVE_LAB_CORE = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

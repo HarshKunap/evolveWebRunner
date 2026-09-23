@@ -72,7 +72,7 @@
       { s: 2, t: "}" },
       { s: 2, t: ".card { background: rgba(127,127,127,.13); border-radius: 16px; padding: 16px; min-width: 0; }" },
       { s: 2, t: ".side h2 { margin: 0 0 6px; font-size: 1.1rem; }" },
-      { s: 2, t: ".stage { position: relative; }" },
+      { s: 2, t: ".stage { position: relative; overflow: hidden; }" },
       { s: 2, t: "#game {" },
       { s: 2, slot: "gamebox" },
       { s: 2, t: "  position: relative; overflow: hidden;" },

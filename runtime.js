@@ -101,11 +101,21 @@
       post({ type: "level-start", level: cfg.level });
       requestAnimationFrame(loop);
     }
+    // Jump arc fitted to the game box: same air time everywhere, lower peak on short (phone) boxes,
+    // so the runner never leaves #game.
+    var AIR = 0.713;
+    function headroom() { return Math.max(60, (game.clientHeight || 240) - GROUND - STAND - 6); }
+    function arc() {
+      var apex = Math.min(146, headroom());
+      var v = 4 * apex / AIR;
+      return { v: v, g: 2 * v / AIR, v2: v * 0.85 };
+    }
     function jump() {
       if (!st.running) { start(); return; }
       if (st.done) return;
-      if (st.y <= 0.01) { st.vy = 820; st.air = 1; }
-      else if (cfg.doubleJump && st.air === 1) { st.vy = 700; st.air = 2; }
+      var a = arc();
+      if (st.y <= 0.01) { st.vy = a.v; st.air = 1; }
+      else if (cfg.doubleJump && st.air === 1) { st.vy = a.v2; st.air = 2; }
     }
     function duck(down) {
       if (!cfg.duck) { if (down) log("ArrowDown pressed, but no listener handles it yet", "warn"); return; }
@@ -216,8 +226,10 @@
 
       // physics
       if (st.y > 0 || st.vy > 0) {
-        st.vy -= 2300 * dt;
+        var room = headroom();
+        st.vy -= arc().g * dt;
         st.y = Math.max(0, st.y + st.vy * dt);
+        if (st.y > room) { st.y = room; st.vy = Math.min(st.vy, 0); }   // ceiling: stay inside the box
         if (st.y === 0) { st.vy = 0; st.air = 0; }
       }
       st.dist += speed * dt / 20;

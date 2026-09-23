@@ -27,7 +27,7 @@ test("HTML and CSS alone cannot play; play unlocks from JavaScript onward", () =
 });
 
 test("placing: strict top-to-bottom order, wrong blocks flagged for a penalty, choices swap freely", () => {
-  const st = Core.createState("Harsh");
+  const st = Core.createState("Ada");
   assert.equal(Core.currentSlot(st), "heading");
   const decoy = Core.place(st, "x-color");
   assert.equal(decoy.reason, "decoy"); assert.equal(decoy.penalty, true);
@@ -47,10 +47,10 @@ test("placing: strict top-to-bottom order, wrong blocks flagged for a penalty, c
 });
 
 test("document renders the literal HTML/CSS the player placed", () => {
-  const st = Core.createState("Harsh");
+  const st = Core.createState("Ada");
   ["h1", "p", "game", "dev", "btn"].forEach((id) => Core.place(st, id));
   let doc = Core.buildDocument(st, { runtimeSrc: R.SRC });
-  assert.match(doc, /<h1>Harsh's Web Runner<\/h1>/);
+  assert.match(doc, /<h1>Ada's Web Runner<\/h1>/);
   assert.match(doc, /src="data:image\/svg\+xml/);
   assert.doesNotMatch(doc, /<style>/);
   st.shipped = 0; st.stage = 1;
@@ -66,31 +66,38 @@ test("names are sanitised so they cannot inject markup", () => {
   assert.equal(Core.cleanName(""), "WEB DEV");
 });
 
-test("scoring is out of 100: code up to 80, speed up to 20", () => {
+test("scoring is out of 100: code climbs from 0 to 60, speed adds up to 40", () => {
   const P = Core.POINTS;
-  assert.equal(P.codeMax + P.timeMax, 100);
+  assert.equal(P.codeMax, 60); assert.equal(P.timeMax, 40);
   const st = Core.createState("A");
-  assert.equal(Core.score(st, 100).total, 80);              // perfect code, not finished yet
-  st.stagePoints[0] = { slots: 5, mistakes: 3, hints: 2 };
-  assert.equal(Core.score(st, 100).code, 80 - 3 * 2 - 2 * 1);
+  assert.equal(Core.score(st, 100).total, 0);                          // starts at 0
+  ["h1", "p", "game", "bot", "btn"].forEach((id) => Core.place(st, id));
+  assert.equal(Core.score(st, 100).code, Math.round(60 * 5 / Core.TOTAL_SLOTS));   // goes up as lines fill
+  st.stagePoints[0].mistakes = 2; st.stagePoints[0].hints = 1;
+  assert.equal(Core.score(st, 100).code, Math.round(60 * 5 / Core.TOTAL_SLOTS) - 3);
   st.finished = 1;
-  assert.equal(Core.score(st, 200).time, 20);              // at or under 4:00 = full speed points
-  assert.equal(Core.score(st, 600).time, 0);               // 10:00 or slower = none
-  assert.equal(Core.score(st, 420).time, 10);              // 7:00 target = half
-  const perfect = Core.createState("B"); perfect.finished = 1;
-  assert.equal(Core.score(perfect, 240).total, 100);
+  assert.equal(Core.score(st, 200).time, 40);                          // <= 4:00 = full speed points
+  assert.equal(Core.score(st, 600).time, 0);                           // 10:00 = none
+  assert.equal(Core.score(st, 420).time, 20);                          // 7:00 = half
 });
 
-test("a shaky beginner still lands 60-80 on code; spamming bottoms out at 0", () => {
+test("a perfect, fast build scores exactly 100; a shaky one still gets most code points", () => {
   const st = Core.createState("A");
-  st.stagePoints[0].mistakes = 8;
-  assert.ok(Core.score(st, 0).code >= 60 && Core.score(st, 0).code <= 80);
-  st.stagePoints[0].mistakes = 200;
-  assert.equal(Core.score(st, 0).code, 0);
+  for (let i = 0; i < 6; i++) {
+    st.stage = i;
+    Core.stageSlots(i).forEach(() => { const h = Core.nextHint(st); Core.place(st, h.tile); });
+  }
+  st.finished = 1;
+  assert.equal(Core.score(st, 240).total, 100);
+  st.stagePoints[2].mistakes = 8;
+  assert.equal(Core.score(st, 240).code, 52);
+  st.stagePoints[2].mistakes = 500;
+  assert.equal(Core.score(st, 240).code, 0);                           // spamming bottoms out
 });
 
 test("each wrong block costs exactly the mistake penalty", () => {
   const st = Core.createState("A");
+  ["h1", "p", "game", "bot", "btn"].forEach((id) => Core.place(st, id));
   const clean = Core.score(st, 0).total;
   st.stagePoints[1].mistakes = 3;
   assert.equal(Core.score(st, 0).total, clean - 3 * Core.POINTS.mistake);

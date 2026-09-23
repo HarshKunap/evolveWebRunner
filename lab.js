@@ -6,7 +6,7 @@
   const Core = window.EVOLVE_LAB_CORE;
   const RUNTIME_SRC = window.EVOLVE_RUNTIME_SRC;
   const { STAGES, FILES, SLOTS, ASSETS } = C;
-  const BOARD_KEY = "evolve-lab-leaderboard-v2";   // v2: scores out of 100
+  const BOARD_KEY = "evolve-lab-leaderboard-v3";   // v3: 60 code + 40 speed
   const IDLE_NUDGE_MS = 25000;
 
   const $ = (id) => document.getElementById(id);
@@ -269,8 +269,8 @@
       }
       state.mistakes += 1;
       state.stagePoints[state.stage].mistakes += 1;
-      feedback("<b>✗ −" + Core.POINTS.mistake + " points.</b> " + esc(res.why || "It doesn't belong here."), "bad");
-      toast("✗ −" + Core.POINTS.mistake + " points: wrong block for this line", "bad");
+      feedback("<b>✗ −" + Core.POINTS.mistake + (Core.POINTS.mistake === 1 ? " point." : " points.") + "</b> " + esc(res.why || "It doesn't belong here."), "bad");
+      toast("✗ −" + Core.POINTS.mistake + (Core.POINTS.mistake === 1 ? " point" : " points") + ": wrong block for this line", "bad");
       consoleLog("Rejected: " + tile.code.replace("{NAME}", state.name) + " (−" + Core.POINTS.mistake + ")", "warn");
       if (btn && !reduceMotion) { btn.classList.remove("shake"); void btn.offsetWidth; btn.classList.add("shake"); }
       el.score.classList.remove("penalty"); void el.score.offsetWidth; el.score.classList.add("penalty");
@@ -461,7 +461,7 @@
       setDevice("phone");
       consoleLog("Layout overflow: page is 390px wide but columns don't fit", "warn");
     }
-    feedback("Fill the <b>▶ highlighted line</b> first, top to bottom. A wrong block costs " + Core.POINTS.mistake + " points." + (s.tiles.some((t) => t.choice) ? " Named blocks are choices: pick the one you like." : ""), "info");
+    feedback("Fill the <b>▶ highlighted line</b> first, top to bottom. Each correct line earns points; a wrong block costs " + Core.POINTS.mistake + (Core.POINTS.mistake === 1 ? " point." : " points.") + (s.tiles.some((t) => t.choice) ? " Named blocks are choices: pick the one you like." : ""), "info");
     renderBuild();
     refreshPreview();
     updateScore();
@@ -553,7 +553,7 @@
     const P = Core.POINTS;
     el.resStats.innerHTML = [
       ["FINISH TIME", fmt(secs), "+" + sc.time + " speed pts"],
-      ["CODE", sc.code + " / " + P.codeMax, sc.mistakes + " wrong · " + sc.hints + " hints"],
+      ["CODE", sc.code + " / " + P.codeMax, sc.filled + " lines · " + sc.mistakes + " wrong · " + sc.hints + " hints"],
       ["SPEED", "+" + sc.time + " / " + P.timeMax, "full at " + fmt(P.fastSeconds) + ", 0 at " + fmt(P.slowSeconds)],
       ["TOTAL", sc.total + " / " + P.max, ""]
     ].map((r, i) => '<div class="' + (i === 3 ? "total" : "") + '"><span>' + r[0] + "</span><strong>" + r[1] + "</strong>" +
@@ -581,6 +581,12 @@
     mode = "intro";
     el.name.focus();
   });
+
+  // Organisers: open the page with ?reset=1 to clear this browser's leaderboard (e.g. after test runs).
+  if (/[?&]reset=1\b/.test(location.search)) {
+    try { localStorage.removeItem(BOARD_KEY); localStorage.removeItem("evolve-lab-best"); } catch (e) { /* storage blocked */ }
+    try { history.replaceState(null, "", location.pathname); } catch (e) { /* ignore */ }
+  }
 
   // Blank page before start.
   el.preview.srcdoc = "<!doctype html><title>Empty</title><body style='font:14px system-ui;color:#888;display:grid;place-items:center;height:90vh;margin:0'>index.html is empty</body>";
