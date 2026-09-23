@@ -44,12 +44,11 @@ npm start          # or: node server.js 8765
 
 For rehearsals, `http://localhost:8765/?test=1` exposes `window.EVOLVE_LAB` debug hooks.
 
-## Scoring
+## Scoring (out of 100)
 
-- Build: blocks go in **top to bottom**. +100 per line filled; **−100 for every wrong block** (decoy or out of order, and the score can go negative, so spamming never pays); −30 per paid hint. Changing a choice you already made (Bot → Cat) is free.
-- Play: +1 per metre, +50 per `200` coin, −40 per crash (Spicy spawn rate: ×1.25)
-- Time bonus at the end: `(420 − seconds) × 4` if faster than 7:00
-- Local leaderboard in `localStorage` (score, then faster time)
+- **Code: up to 80.** Everyone starts at 80. Each wrong block (decoy or out of order) costs **−2**, each paid hint **−1** (floors at 0). Changing a choice you already made is free. A careful beginner lands around 60–80.
+- **Speed: up to 20.** Full 20 if you finish in 4:00 or less, sliding to 0 at 10:00 (7:00 target = 10). Shown next to the finish time on the results screen.
+- **Total = code + speed**, max 100. The local leaderboard (`localStorage`) ranks by score, then faster time.
 
 ## Customise
 
@@ -70,4 +69,4 @@ npm test          # or: node --test tests/*.test.cjs
 Add `?test=1` to the URL to expose `window.EVOLVE_LAB` (`start`, `fillStage`, `ship`, `clearLevel`, `next`)
 for event-day rehearsals.
 
-The previous runner build is no longer in this repo; it is still in the git history (commit `c404cfc`).
+The previous runner build is kept unchanged in `legacy-runner/`.

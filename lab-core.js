@@ -5,7 +5,10 @@
   const C = root.EVOLVE_LAB_CONTENT || (typeof require === "function" ? require("./stages.js") : null);
   const { FILES, SLOTS, STAGES, ASSETS } = C;
 
-  const POINTS = { slot: 100, mistake: 100, hint: 30, coin: 50, crash: 40, perMetre: 1, targetSeconds: 420, timeRate: 4 };
+  // Score out of 100: up to 80 for the code (accuracy), up to 20 for speed.
+  // Wrong block −2, paid hint −1 (code part floors at 0). Time: full 20 at ≤ 4:00, falling to 0 at 10:00.
+  const POINTS = { max: 100, codeMax: 80, timeMax: 20, mistake: 2, hint: 1, fastSeconds: 240, slowSeconds: 600,
+    coin: 50, crash: 40, perMetre: 1 };
 
   function cleanName(name) {
     const n = String(name || "").replace(/[<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
@@ -172,19 +175,17 @@
     return Math.max(0, Math.round(raw * (spicy ? 1.25 : 1)));
   }
 
+  function timeBonus(seconds) {
+    const t = (POINTS.slowSeconds - seconds) / (POINTS.slowSeconds - POINTS.fastSeconds);
+    return Math.round(POINTS.timeMax * Math.max(0, Math.min(1, t)));
+  }
+
   function score(state, nowSeconds) {
-    // +100 per line actually filled (removing and re-adding a block can't farm points)
-    const earned = state.stagePoints.reduce((sum, p, i) => {
-      const filled = i <= state.stage ? stageSlots(i).filter((id) => state.fills[id]).length : 0;
-      return sum + Math.max(0, filled * POINTS.slot - p.hints * POINTS.hint);
-    }, 0);
-    const lost = state.stagePoints.reduce((sum, p) => sum + p.mistakes * POINTS.mistake, 0);
-    const build = earned - lost;          // wrong blocks always cost the full 100, so spamming never pays
-    const spicy = chosen(state, "spawn") === "sp-spicy";
-    const run = state.runs.reduce((sum, r) => sum + runPoints(r, spicy), 0);
-    const seconds = nowSeconds == null ? 0 : nowSeconds;
-    const time = state.finished ? Math.max(0, Math.floor((POINTS.targetSeconds - seconds) * POINTS.timeRate)) : 0;
-    return { build, run, time, total: build + run + time };   // can go negative: every wrong block visibly costs 100
+    const mistakes = state.stagePoints.reduce((sum, p) => sum + p.mistakes, 0);
+    const hints = state.stagePoints.reduce((sum, p) => sum + p.hints, 0);
+    const code = Math.max(0, POINTS.codeMax - mistakes * POINTS.mistake - hints * POINTS.hint);
+    const time = state.finished ? timeBonus(nowSeconds == null ? 0 : nowSeconds) : 0;
+    return { code, time, mistakes, hints, total: code + time };
   }
 
   function compareEntries(a, b) {
@@ -194,7 +195,7 @@
   }
 
   const api = { POINTS, cleanName, createState, tileById, stageSlots, currentSlot, isStageComplete, place, removeFill, nextHint,
-    fileLines, fileText, visibleFiles, runtimeConfig, buildDocument, runPoints, score, compareEntries, chosen };
+    fileLines, fileText, visibleFiles, runtimeConfig, buildDocument, runPoints, score, timeBonus, compareEntries, chosen };
   root.EVOLVE_LAB_CORE = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

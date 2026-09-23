@@ -66,39 +66,42 @@ test("names are sanitised so they cannot inject markup", () => {
   assert.equal(Core.cleanName(""), "WEB DEV");
 });
 
-test("scoring: build points, mistakes, run points, spicy bonus, time bonus only at finish", () => {
+test("scoring is out of 100: code up to 80, speed up to 20", () => {
+  const P = Core.POINTS;
+  assert.equal(P.codeMax + P.timeMax, 100);
   const st = Core.createState("A");
-  ["h1", "p", "game", "bot", "btn"].forEach((id) => Core.place(st, id));
-  st.stagePoints[0] = { slots: 5, mistakes: 2, hints: 1 };
-  st.runs.push({ level: 1, distance: 320, coins: 2, crashes: 1 });
-  let s = Core.score(st, 300);
-  assert.equal(s.build, 500 - 30 - 200);          // each wrong block costs a full 100
-  assert.equal(s.run, 320 + 100 - 40);
-  assert.equal(s.time, 0);
+  assert.equal(Core.score(st, 100).total, 80);              // perfect code, not finished yet
+  st.stagePoints[0] = { slots: 5, mistakes: 3, hints: 2 };
+  assert.equal(Core.score(st, 100).code, 80 - 3 * 2 - 2 * 1);
   st.finished = 1;
-  s = Core.score(st, 300);
-  assert.equal(s.time, (420 - 300) * 4);
-  assert.equal(Core.score(st, 500).time, 0);
-  st.fills.spawn = "sp-spicy";
-  assert.equal(Core.score(st, 300).run, Math.round(380 * 1.25));
+  assert.equal(Core.score(st, 200).time, 20);              // at or under 4:00 = full speed points
+  assert.equal(Core.score(st, 600).time, 0);               // 10:00 or slower = none
+  assert.equal(Core.score(st, 420).time, 10);              // 7:00 target = half
+  const perfect = Core.createState("B"); perfect.finished = 1;
+  assert.equal(Core.score(perfect, 240).total, 100);
 });
 
-test("spamming wrong blocks can never pay: total drops by 100 per mistake", () => {
+test("a shaky beginner still lands 60-80 on code; spamming bottoms out at 0", () => {
   const st = Core.createState("A");
-  ["h1", "p", "game", "bot", "btn"].forEach((id) => Core.place(st, id));
-  const clean = Core.score(st, 0).total;
-  st.stagePoints[0].mistakes = 3;
-  assert.equal(Core.score(st, 0).total, clean - 300);
-  st.stagePoints[0].mistakes = 50;
-  assert.equal(Core.score(st, 0).total, clean - 5000);
+  st.stagePoints[0].mistakes = 8;
+  assert.ok(Core.score(st, 0).code >= 60 && Core.score(st, 0).code <= 80);
+  st.stagePoints[0].mistakes = 200;
+  assert.equal(Core.score(st, 0).code, 0);
 });
 
-test("removing and re-adding a block does not farm points", () => {
+test("each wrong block costs exactly the mistake penalty", () => {
+  const st = Core.createState("A");
+  const clean = Core.score(st, 0).total;
+  st.stagePoints[1].mistakes = 3;
+  assert.equal(Core.score(st, 0).total, clean - 3 * Core.POINTS.mistake);
+});
+
+test("removing and re-adding a block does not change the score", () => {
   const st = Core.createState("A");
   Core.place(st, "h1");
-  const once = Core.score(st, 0).build;
+  const once = Core.score(st, 0).total;
   for (let i = 0; i < 5; i++) { Core.removeFill(st, "heading"); Core.place(st, "h1"); }
-  assert.equal(Core.score(st, 0).build, once);
+  assert.equal(Core.score(st, 0).total, once);
 });
 
 test("leaderboard orders by score then faster time", () => {

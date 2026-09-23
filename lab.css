@@ -227,10 +227,12 @@ body.dragging .slot { border-color: #6a7cc0; color: #aab6de; }
 .results-main .eyebrow { color: #0f8f4f; font-size: 13px; }
 .results-main h2 { margin: 6px 0 8px; font: 700 clamp(22px, 3vw, 32px) var(--mono); word-break: break-all; }
 .results-main .lede strong { color: var(--coral); }
-.res-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
+.res-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 20px 0; }
 .res-stats div { padding: 10px 12px; border-radius: 12px; background: #fff; }
 .res-stats span { display: block; font: 700 10px var(--mono); letter-spacing: .14em; color: #6a7088; }
 .res-stats strong { font: 700 20px var(--mono); }
+.res-stats small { display: block; margin-top: 2px; font: 11px var(--mono); color: #6a7088; }
+.res-stats .total small { color: #aab3cc; }
 .res-stats .total { background: #0a1021; color: #fff; }
 .res-stats .total strong { color: var(--gold); }
 .results-main .panel-head span, .results-side .panel-head span { color: #6a7088; }

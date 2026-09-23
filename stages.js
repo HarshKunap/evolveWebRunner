@@ -238,7 +238,7 @@
       tiles: [
         { id: "raf", group: "loop", code: "requestAnimationFrame(loop);", lesson: "Asks the browser to run loop() again before the next repaint, about 60 times a second." },
         { id: "sp-chill", group: "spawn", choice: "Chill", code: "setInterval(spawnBlock, 1600);", lesson: "Creates a new block every 1.6 s. Relaxed pace." },
-        { id: "sp-spicy", group: "spawn", choice: "Spicy +25%", code: "setInterval(spawnBlock, 1150);", lesson: "Creates a new block every 1.15 s. Harder, and your run points get +25%." },
+        { id: "sp-spicy", group: "spawn", choice: "Spicy", code: "setInterval(spawnBlock, 1150);", lesson: "Creates a new block every 1.15 s. A tougher run." },
         { id: "k-single", group: "input", choice: "Jump", code: "document.addEventListener('keydown', jump);", lesson: "Listens for key presses and calls jump()." },
         { id: "k-double", group: "input", choice: "Double jump", code: "document.addEventListener('keydown', doubleJump);", lesson: "Listens for key presses. Press again mid-air to jump twice." },
         { id: "hit", group: "collide", code: "if (overlaps(runner, block)) crash();", lesson: "Compares two element boxes. If they overlap, you crash." },

@@ -6,7 +6,7 @@
   const Core = window.EVOLVE_LAB_CORE;
   const RUNTIME_SRC = window.EVOLVE_RUNTIME_SRC;
   const { STAGES, FILES, SLOTS, ASSETS } = C;
-  const BOARD_KEY = "evolve-lab-leaderboard-v1";
+  const BOARD_KEY = "evolve-lab-leaderboard-v2";   // v2: scores out of 100
   const IDLE_NUDGE_MS = 25000;
 
   const $ = (id) => document.getElementById(id);
@@ -429,12 +429,10 @@
     const s = stage();
     const run = { level: data.level, distance: data.distance, coins: data.coins, crashes: data.crashes };
     state.runs.push(run);
-    const spicy = Core.chosen(state, "spawn") === "sp-spicy";
-    const pts = Core.runPoints(run, spicy);
     mode = "cleared";
     levelProgress.distance = levelProgress.goal;
     renderLevel();
-    toast("Level " + data.level + " cleared ✓  +" + pts + " pts", "good");
+    toast("Level " + data.level + " cleared ✓", "good");
     el.next.disabled = false;
     el.next.textContent = s.key === "ai" ? "See your results →" : "Build the next layer: " + STAGES[state.stage + 1].tech + " →";
     updateScore();
@@ -505,7 +503,7 @@
   // ---------- score + clock ----------
   function updateScore() {
     if (!state) return;
-    el.score.textContent = Core.score(state, elapsed()).total.toLocaleString();
+    el.score.textContent = Core.score(state, elapsed()).total;
   }
   function tick() {
     el.clock.textContent = fmt(elapsed());
@@ -552,16 +550,21 @@
     const entry = { name: state.name, score: sc.total, time: Math.round(secs), createdAt: Date.now() };
     const list = saveBoard(entry);
     el.resUrl.textContent = "https://" + slug(state.name) + ".evolve.dev";
+    const P = Core.POINTS;
     el.resStats.innerHTML = [
-      ["TIME", fmt(secs)], ["BUILD", "+" + sc.build], ["PLAY", "+" + sc.run], ["TIME BONUS", "+" + sc.time], ["TOTAL", sc.total.toLocaleString()]
-    ].map((r, i) => '<div class="' + (i === 4 ? "total" : "") + '"><span>' + r[0] + "</span><strong>" + r[1] + "</strong></div>").join("");
+      ["FINISH TIME", fmt(secs), "+" + sc.time + " speed pts"],
+      ["CODE", sc.code + " / " + P.codeMax, sc.mistakes + " wrong · " + sc.hints + " hints"],
+      ["SPEED", "+" + sc.time + " / " + P.timeMax, "full at " + fmt(P.fastSeconds) + ", 0 at " + fmt(P.slowSeconds)],
+      ["TOTAL", sc.total + " / " + P.max, ""]
+    ].map((r, i) => '<div class="' + (i === 3 ? "total" : "") + '"><span>' + r[0] + "</span><strong>" + r[1] + "</strong>" +
+      (r[2] ? "<small>" + r[2] + "</small>" : "") + "</div>").join("");
     el.resStack.innerHTML = STAGES.map((s, i) => {
       const picks = lessonsFor(i).filter((t) => t.choice).map((t) => t.choice);
       return '<li style="--tech:' + s.color + '"><b>' + esc(s.tech) + "</b><span>" + esc(s.title) +
         (picks.length ? " · <em>" + esc(picks.join(", ")) + "</em>" : "") + "</span></li>";
     }).join("");
     el.board.innerHTML = list.map((x) => '<li class="' + (x.createdAt === entry.createdAt ? "me" : "") + '"><span>' + esc(x.name) + "</span><b>" +
-      Number(x.score).toLocaleString() + "</b><small>" + fmt(x.time) + "</small></li>").join("");
+      Number(x.score) + "</b><small>" + fmt(x.time) + "</small></li>").join("");
     el.results.hidden = false;
     renderStepper();
     updateScore();
