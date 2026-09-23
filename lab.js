@@ -6,7 +6,7 @@
   const Core = window.EVOLVE_LAB_CORE;
   const RUNTIME_SRC = window.EVOLVE_RUNTIME_SRC;
   const { STAGES, FILES, SLOTS, ASSETS } = C;
-  const BOARD_KEY = "evolve-lab-leaderboard-v3";   // v3: 60 code + 40 speed
+  const BOARD_KEY = "evolve-lab-leaderboard-v4";   // v4: 60 code + 40 speed + coin bonus
   const IDLE_NUDGE_MS = 25000;
 
   const $ = (id) => document.getElementById(id);
@@ -421,7 +421,7 @@
     const p = levelProgress;
     el.levelNumbers.textContent = Math.floor(Math.min(p.distance, p.goal)) + " / " + p.goal + " m";
     el.levelFill.style.width = Math.min(100, (p.distance / p.goal) * 100) + "%";
-    el.levelStats.textContent = p.coins + " coin" + (p.coins === 1 ? "" : "s") + " · " + p.crashes + " crash" + (p.crashes === 1 ? "" : "es");
+    el.levelStats.textContent = p.coins + " coin" + (p.coins === 1 ? "" : "s") + " (+" + (p.coins * Core.POINTS.coin) + ") · " + p.crashes + " crash" + (p.crashes === 1 ? "" : "es");
   }
 
   function levelComplete(data) {
@@ -484,6 +484,8 @@
       toast(msg, "info");
     } else if (d.type === "progress" && levelProgress && mode === "play") {
       levelProgress.distance = d.distance; levelProgress.coins = d.coins; levelProgress.crashes = d.crashes; renderLevel();
+      const sc = Core.score(state, elapsed()), P = Core.POINTS;
+      el.score.textContent = Math.min(P.max, sc.code + sc.time + Math.min(P.coinMax, (sc.coinsGot + d.coins) * P.coin));
     } else if (d.type === "level-complete") levelComplete(d);
     else if (d.type === "crash" && !reduceMotion) { el.viewport.classList.remove("hit"); void el.viewport.offsetWidth; el.viewport.classList.add("hit"); }
   });
@@ -555,8 +557,9 @@
       ["FINISH TIME", fmt(secs), "+" + sc.time + " speed pts"],
       ["CODE", sc.code + " / " + P.codeMax, sc.filled + " lines · " + sc.mistakes + " wrong · " + sc.hints + " hints"],
       ["SPEED", "+" + sc.time + " / " + P.timeMax, "full at " + fmt(P.fastSeconds) + ", 0 at " + fmt(P.slowSeconds)],
-      ["TOTAL", sc.total + " / " + P.max, ""]
-    ].map((r, i) => '<div class="' + (i === 3 ? "total" : "") + '"><span>' + r[0] + "</span><strong>" + r[1] + "</strong>" +
+      ["COINS", "+" + sc.coins + " / " + P.coinMax, sc.coinsGot + " coin" + (sc.coinsGot === 1 ? "" : "s") + " × " + P.coin],
+      ["TOTAL", sc.total + " / " + P.max, "capped at " + P.max]
+    ].map((r, i) => '<div class="' + (r[0] === "TOTAL" ? "total" : "") + '"><span>' + r[0] + "</span><strong>" + r[1] + "</strong>" +
       (r[2] ? "<small>" + r[2] + "</small>" : "") + "</div>").join("");
     el.resStack.innerHTML = STAGES.map((s, i) => {
       const picks = lessonsFor(i).filter((t) => t.choice).map((t) => t.choice);

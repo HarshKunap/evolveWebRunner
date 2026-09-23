@@ -43,7 +43,7 @@
     function say(text) { msg.textContent = text; msg.style.display = text ? "grid" : "none"; }
 
     function points() {
-      return Math.max(0, Math.floor(st.dist) + st.coinsGot * 50 - st.crashes * 40);
+      return Math.max(0, Math.floor(st.dist) + st.coinsGot * 2 - st.crashes * 40);
     }
     function updateScore() {
       if (scoreEl) scoreEl.textContent = "Score: " + points() + "  ·  " + Math.floor(st.dist) + " / " + cfg.goal + " m";
@@ -160,10 +160,10 @@
       el.style.width = b.w + "px"; el.style.height = b.h + "px"; el.style.bottom = b.bottom + "px";
       game.appendChild(el);
       st.blocks.push(b);
-      if (cfg.coins && rand() < 0.45) {
+      if (cfg.coins && rand() < 0.35) {
         var c = document.createElement("div");
-        c.className = "coin"; c.textContent = "200";
-        var cy = GROUND + (rand() < 0.5 ? 12 : 96);
+        c.className = "coin"; c.textContent = "+2";
+        var cy = GROUND + 78 + Math.round(rand() * 14);   // in the air: jump to grab it
         var coin = { x: W + 10 + b.w + 110, y: cy, el: c };
         c.style.bottom = cy + "px";
         game.appendChild(c);

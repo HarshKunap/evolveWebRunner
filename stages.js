@@ -116,7 +116,7 @@
       { s: 4, t: "async function loadLevel() {" },
       { s: 4, slot: "fetch" },
       { s: 4, slot: "json" },
-      { s: 4, t: "  addBlocks(level.blocks);   // overhead bars + 200 coins" },
+      { s: 4, t: "  addBlocks(level.blocks);   // overhead bars + bonus coins" },
       { s: 4, t: "}" },
       { s: 4, slot: "duck" },
       { s: 4, slot: "feed" },
@@ -253,7 +253,7 @@
       brief: "An API lets your page ask a server for data. fetch() sends the request; .json() reads the reply. Level 2 arrives from the server with overhead bars you need to duck.",
       ship: "Save api.js",
       after: "Your page talks to a server now (a mock one here). Watch the Network tab: new level data and a live feed arrived.",
-      tryIt: "Level 2: jump the blocks, DUCK (↓ or S) under the dashed bars, grab the 200 coins.",
+      tryIt: "Level 2: jump the blocks, DUCK (↓ or S) under the dashed bars, and jump for the +2 coins (bonus points, up to +10).",
       play: { level: 2, goal: 420, speed: 320, spawnMs: 1350, labels: ["{json}", "GET", "<ul>", "500"], highLabels: ["<nav>", "menu"] },
       tiles: [
         { id: "fetch", group: "fetch", code: "const res = await fetch('/api/level-2');", lesson: "fetch() sends an HTTP GET request to the server and waits for the reply." },

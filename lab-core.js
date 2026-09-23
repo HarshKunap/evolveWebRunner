@@ -6,10 +6,11 @@
   const { FILES, SLOTS, STAGES, ASSETS } = C;
 
   // Score out of 100: up to 60 for the code (accuracy), up to 40 for speed.
-  // Code starts at 0 and climbs as lines are filled (all 27 lines = 60). Wrong block −1, paid hint −1 (floors at 0).
+  // Code starts at 0 and climbs as lines are filled (all 27 lines = 60). Mistakes/hints subtract (floors at 0).
   // Speed: full 40 at ≤ 4:00, falling to 0 at 10:00, added when you finish.
-  const POINTS = { max: 100, codeMax: 60, timeMax: 40, mistake: 1, hint: 1, fastSeconds: 240, slowSeconds: 600,
-    coin: 50, crash: 40, perMetre: 1 };
+  // Wrong block −3, paid hint −2. Coins in levels: +2 each, bonus capped at +10. Total capped at 100.
+  const POINTS = { max: 100, codeMax: 60, timeMax: 40, mistake: 3, hint: 2, fastSeconds: 240, slowSeconds: 600,
+    coin: 2, coinMax: 10, crash: 40, perMetre: 1 };
 
   function cleanName(name) {
     const n = String(name || "").replace(/[<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
@@ -192,7 +193,9 @@
     const earned = Math.round(POINTS.codeMax * filled / TOTAL_SLOTS);
     const code = Math.max(0, earned - mistakes * POINTS.mistake - hints * POINTS.hint);
     const time = state.finished ? timeBonus(nowSeconds == null ? 0 : nowSeconds) : 0;
-    return { code, time, mistakes, hints, filled, total: code + time };
+    const coinsGot = state.runs.reduce((sum, r) => sum + (r.coins || 0), 0);
+    const coins = Math.min(POINTS.coinMax, coinsGot * POINTS.coin);
+    return { code, time, coins, coinsGot, mistakes, hints, filled, total: Math.min(POINTS.max, code + time + coins) };
   }
 
   function compareEntries(a, b) {
