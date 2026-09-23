@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a1021">
+  <title>EVOLVE — A Web Runner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="site-header">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">&lt;/&gt;</span><div><strong>EVOLVE</strong><small>A WEB RUNNER</small></div></div>
+      <div class="club-label">CODING CLUB <span>/</span> WEB DEVELOPMENT DEPARTMENT</div>
+      <button id="sound-toggle" class="icon-button" type="button" aria-label="Turn sound on" aria-pressed="false" title="Toggle sound">SOUND OFF</button>
+    </header>
+
+    <section id="game-frame" class="game-frame" data-era="html" aria-label="Evolve runner game">
+      <div class="hud" aria-live="off">
+        <div class="hud-cell"><span class="hud-label">DISTANCE</span><strong id="distance-value">0 <small>/ 10,000 M</small></strong></div>
+        <div class="hud-cell"><span class="hud-label">TIME LEFT</span><strong id="time-value">10:00</strong></div>
+        <div class="hud-cell hud-era"><span class="hud-label">CURRENT ERA</span><strong id="era-value">HTML</strong><small id="pace-value" class="pace-value">PACE 36.0 M/S</small></div>
+        <div class="hud-cell hud-score"><span class="hud-label">LIVE SCORE</span><strong id="score-value">0</strong></div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="game-canvas" width="1200" height="620" tabindex="0" aria-label="Runner course. Jump with Space, W, or Up Arrow. Duck with S or Down Arrow."></canvas>
+        <div id="page-world" class="page-world" aria-hidden="true">
+          <div class="world-structure"><span>&lt;main&gt;</span><strong>MY WEB PAGE</strong><small>&lt;/main&gt;</small></div>
+          <div class="world-theme" hidden><span>CSS · GRID</span><strong>LANE STYLED · BOXES 82%</strong></div>
+          <div class="world-interaction" hidden><span>JS · KEYDOWN</span><strong>DOUBLE JUMP ARMED</strong></div>
+          <div class="world-feed" hidden><span>FETCH · 200</span><strong id="feed-value">RESPONSES INBOUND ●</strong></div>
+          <div class="world-reflow" hidden><span>@MEDIA · 640PX</span><strong>PHONE LAYOUT · S = SNAP DOWN</strong></div>
+          <div class="world-cache" hidden><span>CACHE.PUT</span><strong id="cache-value">SHIELD READY</strong></div>
+          <div class="world-predict" hidden><span>/API/PREDICT</span><strong>GHOST SCOUT · NEXT <b id="prediction-value">?</b></strong></div>
+        </div>
+        <aside id="build-stack" class="build-stack" aria-label="Tools in your build"><strong>YOUR BUILD</strong><div id="build-items"></div></aside>
+        <div id="pickup-toast" class="pickup-toast" aria-live="polite" hidden></div>
+        <div id="effect-status" class="effect-status" aria-live="off" hidden></div>
+        <div id="html-prologue" class="html-prologue" hidden>
+          <header class="prologue-heading"><span>01 / HTML — THE FIRST PAGE</span><strong>A page before the game</strong><small id="prologue-timer">10</small></header>
+          <iframe id="html-page" src="html-prologue.html" title="Interactive unstyled HTML page" sandbox="allow-same-origin"></iframe>
+          <footer aria-live="polite" aria-atomic="true"><span id="prologue-status">Choose a color, open the details, or follow a link. CSS arrives soon.</span></footer>
+        </div>
+        <div id="gate-banner" class="gate-banner" aria-live="polite" hidden>
+          <span id="gate-kicker">NEW ERA UNLOCKED</span>
+          <strong id="gate-title"></strong>
+          <span id="gate-message"></span>
+          <em id="gate-chip"></em>
+        </div>
+        <div id="crash-banner" class="crash-banner" aria-live="polite" hidden>ERROR 404: MOMENTUM LOST</div>
+        <div id="status-message" class="sr-only" aria-live="polite"></div>
+
+        <section id="start-screen" class="overlay start-screen">
+          <div class="intro-copy">
+            <div class="eyebrow"><span class="eyebrow-line"></span> THE WEB IS ALWAYS MOVING</div>
+            <h1>Build speed.<br><em>Make history.</em></h1>
+            <p>Bare HTML page to AI web. Catch six real tools — each one changes how the run plays.</p>
+            <dl class="drop-key" aria-label="Drop key">
+              <div class="drop-key-row" data-kind="build"><dt><span class="drop-key-swatch" aria-hidden="true"></span>BUILD</dt><dd>Mint · permanent upgrade</dd></div>
+              <div class="drop-key-row" data-kind="buff"><dt><span class="drop-key-swatch" aria-hidden="true"></span>BUFF</dt><dd>Yellow · timed help</dd></div>
+              <div class="drop-key-row" data-kind="bug"><dt><span class="drop-key-swatch" aria-hidden="true"></span>CORRUPTED <b aria-hidden="true">?</b></dt><dd>Violet · may hurt you</dd></div>
+              <div class="drop-key-row" data-kind="packet"><dt><span class="drop-key-swatch" aria-hidden="true"></span>200 PACKET</dt><dd>Blue · clears a block after fetch</dd></div>
+            </dl>
+            <div class="start-actions">
+              <label for="player-name" class="name-label">YOUR RUNNER NAME</label>
+              <input id="player-name" type="text" maxlength="16" autocomplete="nickname" value="WEB DEV" aria-label="Runner name">
+              <button id="start-button" class="primary-button" type="button">START THE RUN <span aria-hidden="true">↗</span></button>
+            </div>
+          </div>
+          <div class="intro-side">
+            <div class="course-card"><span>THE COURSE</span><strong>10,000<span> M</span></strong><p>Seven eras. About 3–4 minutes to finish. Ten-minute limit.</p><div class="course-line" aria-hidden="true"></div><small>HTML <span>→</span> AI WEB</small></div>
+            <div class="controls-card"><span class="card-heading">CONTROLS</span><div><kbd>SPACE</kbd><kbd>W</kbd><kbd>↑</kbd><span>JUMP</span></div><div><kbd>S</kbd><kbd>↓</kbd><span>DUCK</span></div><p>Catch build drops to change the run. After the JS drop, press <kbd>SPACE</kbd> again in mid-air to double-jump. After the Responsive drop, press <kbd>S</kbd> mid-air to snap down. Speed drops give a short surge; corrupted drops cause brief bugs.</p></div>
+          </div>
+        </section>
+
+        <section id="end-screen" class="overlay end-screen" hidden>
+          <div class="result-panel">
+            <span class="eyebrow">RUN COMPLETE / SESSION LOG</span>
+            <h2 id="result-title">DEPLOYED ✓</h2>
+            <p id="result-description">You travelled through the evolution of the web.<br>The next evolution is what you build.</p>
+            <div class="result-stats">
+              <div><span>DISTANCE</span><strong id="result-distance"></strong></div>
+              <div><span id="result-time-label">FINISH TIME</span><strong id="result-time"></strong></div>
+              <div><span>SPEED BONUS</span><strong id="result-bonus"></strong></div>
+              <div class="final-score"><span>FINAL SCORE</span><strong id="result-score"></strong></div>
+            </div>
+            <div id="chips-recap" class="chips-recap"></div>
+            <div id="drop-recap" class="drop-recap" aria-label="Tools and bugs from this run"></div>
+            <div class="result-footer"><span>CODING CLUB<br><b>WEB DEVELOPMENT DEPARTMENT</b></span><button id="replay-button" class="primary-button" type="button">RUN AGAIN <span aria-hidden="true">↗</span></button></div>
+          </div>
+          <aside class="leaderboard-panel"><div class="leaderboard-heading"><span>LOCAL LEADERBOARD</span><small>THIS BROWSER</small></div><ol id="leaderboard-list"></ol></aside>
+        </section>
+      </div>
+      <div id="skill-path" class="skill-path" aria-label="Skills collected on this run"></div>
+      <div class="frame-footer"><span id="progress-text">0% OF THE WEB EXPLORED</span><div class="progress-track"><div id="progress-fill"></div></div><span>THE NEXT EVOLUTION IS WHAT YOU BUILD.</span></div>
+    </section>
+    <footer class="site-footer"><span>01 / EVOLVE</span><span>MADE FOR THE CODING CLUB</span></footer>
+  </main>
+  <script src="content.js"></script>
+  <script src="scoring.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
