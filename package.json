@@ -1,0 +1,10 @@
+{
+  "name": "evolve-web-build-lab",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Build a real web page layer by layer, then play it. Coding Club - Web Development Department.",
+  "scripts": {
+    "start": "node server.js 8765",
+    "test": "node --test tests/*.test.cjs"
+  }
+}
