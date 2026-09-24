@@ -6,7 +6,7 @@
   const Core = window.EVOLVE_LAB_CORE;
   const RUNTIME_SRC = window.EVOLVE_RUNTIME_SRC;
   const { STAGES, FILES, SLOTS, ASSETS } = C;
-  const BOARD_KEY = "evolve-lab-leaderboard-v4";   // v4: 60 code + 40 speed + coin bonus
+  const BOARD_KEY = "evolve-lab-leaderboard-v5";   // v4: 60 code + 40 speed + coin bonus
   const IDLE_NUDGE_MS = 25000;
 
   const $ = (id) => document.getElementById(id);
@@ -21,7 +21,7 @@
     console: $("dt-console"), network: $("dt-network"), netCount: $("net-count"),
     intro: $("intro"), introPath: $("intro-path"), name: $("player-name"), start: $("start-btn"),
     results: $("results"), resUrl: $("res-url"), resStats: $("res-stats"), resStack: $("res-stack"), board: $("leaderboard"),
-    again: $("again-btn"), view: $("view-btn"), toast: $("toast")
+    again: $("again-btn"), view: $("view-btn"), toast: $("toast"), more: $("more-blocks")
   };
 
   let state = null;
@@ -142,7 +142,16 @@
         '<code>' + highlight(t.code.replace("{NAME}", state.name), lang(t)) + "</code>" +
         (t.choice ? '<span class="tile-choice">' + esc(t.choice) + "</span>" : "") + "</button>";
     }).join("");
+    updateMore();
   }
+
+  // "↓ more blocks" pill while some blocks are hidden below the fold of the blocks panel
+  function updateMore() {
+    const t = el.tiles;
+    el.more.hidden = !(t.scrollHeight - t.clientHeight - t.scrollTop > 4);
+  }
+  el.tiles.addEventListener("scroll", updateMore);
+  window.addEventListener("resize", () => { if (state) updateMore(); });
 
   // ---------- editor ----------
   function currentFiles() { return Core.visibleFiles(state.stage + 1); }
@@ -430,6 +439,11 @@
     const run = { level: data.level, distance: data.distance, coins: data.coins, crashes: data.crashes };
     state.runs.push(run);
     mode = "cleared";
+    if (s.key === "ai") {                       // final level cleared: stop the clock now, not when results are opened
+      state.finished = performance.now();
+      clearInterval(clockTimer);
+      tick();
+    }
     levelProgress.distance = levelProgress.goal;
     renderLevel();
     toast("Level " + data.level + " cleared ✓", "good");
@@ -485,9 +499,16 @@
     } else if (d.type === "progress" && levelProgress && mode === "play") {
       levelProgress.distance = d.distance; levelProgress.coins = d.coins; levelProgress.crashes = d.crashes; renderLevel();
       const sc = Core.score(state, elapsed()), P = Core.POINTS;
-      el.score.textContent = Math.min(P.max, sc.code + sc.time + Math.min(P.coinMax, (sc.coinsGot + d.coins) * P.coin));
+      const live = sc.code + sc.time + Math.min(P.coinMax, (sc.coinsGot + d.coins) * P.coin) - (sc.crashes + d.crashes) * P.crash;
+      el.score.textContent = Math.min(P.max, Math.max(0, live));
     } else if (d.type === "level-complete") levelComplete(d);
-    else if (d.type === "crash" && !reduceMotion) { el.viewport.classList.remove("hit"); void el.viewport.offsetWidth; el.viewport.classList.add("hit"); }
+    else if (d.type === "crash") {
+      toast("✗ −" + Core.POINTS.crash + (Core.POINTS.crash === 1 ? " point" : " points") + ": hit a block", "bad");
+      if (!reduceMotion) {
+        el.viewport.classList.remove("hit"); void el.viewport.offsetWidth; el.viewport.classList.add("hit");
+        el.score.classList.remove("penalty"); void el.score.offsetWidth; el.score.classList.add("penalty");
+      }
+    }
   });
 
   // Forward play keys when focus is outside the page.
@@ -509,7 +530,7 @@
   }
   function tick() {
     el.clock.textContent = fmt(elapsed());
-    el.clock.classList.toggle("over", elapsed() > 420);
+    el.clock.classList.toggle("over", elapsed() > 300);
   }
 
   // ---------- leaderboard ----------
@@ -544,20 +565,20 @@
 
   function finish() {
     mode = "done";
-    state.finished = performance.now();
+    if (!state.finished) state.finished = performance.now();
     clearInterval(clockTimer);
     tick();
     const secs = elapsed();
     const sc = Core.score(state, secs);
-    const entry = { name: state.name, score: sc.total, time: Math.round(secs), createdAt: Date.now() };
+    const entry = { name: state.name, score: sc.total, time: Math.floor(secs), createdAt: Date.now() };
     const list = saveBoard(entry);
     el.resUrl.textContent = "https://" + slug(state.name) + ".evolve.dev";
     const P = Core.POINTS;
     el.resStats.innerHTML = [
       ["FINISH TIME", fmt(secs), "+" + sc.time + " speed pts"],
       ["CODE", sc.code + " / " + P.codeMax, sc.filled + " lines · " + sc.mistakes + " wrong · " + sc.hints + " hints"],
-      ["SPEED", "+" + sc.time + " / " + P.timeMax, "full at " + fmt(P.fastSeconds) + ", 0 at " + fmt(P.slowSeconds)],
-      ["COINS", "+" + sc.coins + " / " + P.coinMax, sc.coinsGot + " coin" + (sc.coinsGot === 1 ? "" : "s") + " × " + P.coin],
+      ["SPEED", "+" + sc.time + " / " + P.timeMax, "≤5:00 +40 · <6:00 +30 · <7:00 +20 · <8:00 +10"],
+      ["PLAY", (sc.coins - sc.crashLoss >= 0 ? "+" : "−") + Math.abs(sc.coins - sc.crashLoss), "+" + sc.coins + " coins (max " + P.coinMax + ") · −" + sc.crashLoss + " for " + sc.crashes + " crash" + (sc.crashes === 1 ? "" : "es")],
       ["TOTAL", sc.total + " / " + P.max, "capped at " + P.max]
     ].map((r, i) => '<div class="' + (r[0] === "TOTAL" ? "total" : "") + '"><span>' + r[0] + "</span><strong>" + r[1] + "</strong>" +
       (r[2] ? "<small>" + r[2] + "</small>" : "") + "</div>").join("");

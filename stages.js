@@ -38,7 +38,7 @@
       { s: 2, t: "      </div>" },
       { s: 1, slot: "button" },
       { s: 5, t: "      <div class=\"touch\"><button data-act=\"jump\">Jump</button><button data-act=\"duck\">Duck</button></div>" },
-      { s: 3, t: "      <p id=\"score\">Score: 0</p>" },
+      { s: 3, t: "      <p id=\"score\">0 m</p>" },
       { s: 2, t: "    </section>" },
       { s: 2, t: "    <aside class=\"card side\">" },
       { s: 2, t: "      <h2>About this page</h2>" },
@@ -233,7 +233,7 @@
       brief: "JavaScript says WHAT HAPPENS: when you click, when you press a key, every frame. Wire up the loop, the obstacles, the controls and the Play button.",
       ship: "Save game.js",
       after: "The page reacts now! JS creates <div class=\"block\"> obstacles, moves them, and listens to your keyboard.",
-      tryIt: "Press SPACE (or click ▶ Play) to start. Jump the blocks and reach the goal to unlock the next layer.",
+      tryIt: "Press SPACE (or click ▶ Play) to start. Jump the blocks and reach the goal to unlock the next layer. Each crash costs 1 point.",
       play: { level: 1, goal: 320, speed: 300, spawnMs: 1500, labels: ["<div>", "<p>", "404", "<br>", "<img>"] },
       tiles: [
         { id: "raf", group: "loop", code: "requestAnimationFrame(loop);", lesson: "Asks the browser to run loop() again before the next repaint, about 60 times a second." },

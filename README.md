@@ -46,10 +46,11 @@ For rehearsals, `http://localhost:8765/?test=1` exposes `window.EVOLVE_LAB` debu
 
 ## Scoring (out of 100)
 
-- **Code: up to 60.** Everyone starts at **0**. Each correct line adds points (all 27 lines = 60). A wrong block (decoy or out of order) costs **−3**, a paid hint **−2**. Penalties stay owed (the code score never shows below 0). Changing a choice you already made is free.
-- **Speed: up to 40.** Added when you finish: full 40 at 4:00 or less, sliding to 0 at 10:00 (7:00 = 20). Shown next to the finish time on the results screen.
+- **Code: up to 60.** Everyone starts at **0**. Each correct line adds points (all 27 lines = 60). A wrong block (decoy or out of order) costs **−4**, a paid hint **−2**. Penalties stay owed (the code score never shows below 0). Changing a choice you already made is free.
+- **Speed: up to 40.** Added when you finish: **5:00 or less = 40**, under 6:00 = 30, under 7:00 = 20, under 8:00 = 10, 8:00 or more = 0. Shown next to the finish time on the results screen.
 - **Coins: up to +10.** Levels 2–4 have floating **+2** coins; jump to grab them. The coin bonus is capped at +10.
-- **Total = code + speed + coins**, capped at 100. The local leaderboard (`localStorage`) ranks by score, then faster time.
+- **Crashes: −1 each.** Hitting a block in any level costs 1 point.
+- **Total = code + speed + coins − crashes**, between 0 and 100. The local leaderboard (`localStorage`) ranks by score, then faster time.
 - **Clear the leaderboard** (e.g. after test runs on the event laptop): open the site with `?reset=1` at the end of the address.
 
 ## Customise

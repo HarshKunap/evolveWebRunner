@@ -13,7 +13,7 @@
       <div class="brand"><span class="brand-mark" aria-hidden="true">&lt;/&gt;</span><div><strong>EVOLVE</strong><small>WEB BUILD LAB</small></div></div>
       <ol class="stepper" id="stepper" aria-label="Web layers"></ol>
       <div class="meters">
-        <div class="meter"><span>TIME</span><b id="clock">0:00</b><small>target 7:00</small></div>
+        <div class="meter"><span>TIME</span><b id="clock">0:00</b><small>5:00 = full speed</small></div>
         <div class="meter"><span>SCORE</span><b id="score">0</b><small>out of 100</small></div>
       </div>
     </header>
@@ -27,13 +27,14 @@
           <div class="toolbox">
             <div class="panel-head"><span>BLOCKS</span><small>Click a block, or drag it onto a line of code</small></div>
             <div class="tiles" id="tiles"></div>
+            <span class="more-blocks" id="more-blocks" hidden>↓ more blocks</span>
           </div>
           <div class="editor">
             <div class="tabs" id="tabs" role="tablist" aria-label="Project files"></div>
             <div class="code" id="code"></div>
           </div>
           <div class="actions">
-            <button id="hint-btn" class="ghost-button" type="button">Hint <small>−1</small></button>
+            <button id="hint-btn" class="ghost-button" type="button">Hint <small>−2</small></button>
             <div id="feedback" class="feedback" aria-live="polite"></div>
             <button id="ship-btn" class="primary-button" type="button" disabled>Save</button>
           </div>
@@ -91,7 +92,7 @@
         <ol class="path" id="intro-path"></ol>
         <div class="intro-start">
           <label for="player-name">NAME YOUR SITE</label>
-          <input id="player-name" type="text" maxlength="16" autocomplete="nickname">
+          <input id="player-name" type="text" maxlength="16" autocomplete="nickname" autofocus>
           <button id="start-btn" class="primary-button" type="button">Start building →</button>
         </div>
         <p class="fine">About 7 minutes · no coding experience needed · click or drag blocks</p>

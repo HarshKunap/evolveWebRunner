@@ -46,7 +46,7 @@
       return Math.max(0, Math.floor(st.dist) + st.coinsGot * 2 - st.crashes * 40);
     }
     function updateScore() {
-      if (scoreEl) scoreEl.textContent = "Score: " + points() + "  ·  " + Math.floor(st.dist) + " / " + cfg.goal + " m";
+      if (scoreEl) scoreEl.textContent = Math.floor(Math.min(st.dist, cfg.goal)) + " / " + cfg.goal + " m  ·  " + st.coinsGot + " coin" + (st.coinsGot === 1 ? "" : "s") + "  ·  " + st.crashes + " crash" + (st.crashes === 1 ? "" : "es");
       post({ type: "progress", distance: st.dist, goal: cfg.goal, coins: st.coinsGot, crashes: st.crashes });
     }
 

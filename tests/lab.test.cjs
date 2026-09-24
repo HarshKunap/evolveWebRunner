@@ -75,18 +75,18 @@ test("scoring: code climbs 0-60, speed up to 40, coins +2 each (max +10), total 
   const base = Math.round(60 * 5 / Core.TOTAL_SLOTS);
   assert.equal(Core.score(st, 100).code, base);
   st.stagePoints[0].mistakes = 1; st.stagePoints[0].hints = 1;
-  assert.equal(Core.score(st, 100).code, Math.max(0, base - 3 - 2));
+  assert.equal(Core.score(st, 100).code, Math.max(0, base - 4 - 2));
   st.runs.push({ level: 1, distance: 320, coins: 3, crashes: 0 });
   assert.equal(Core.score(st, 100).coins, 6);
   st.runs.push({ level: 2, distance: 420, coins: 9, crashes: 0 });
   assert.equal(Core.score(st, 100).coins, 10);                       // capped
   st.finished = 1;
-  assert.equal(Core.score(st, 200).time, 40);
-  assert.equal(Core.score(st, 600).time, 0);
-  assert.equal(Core.score(st, 420).time, 20);
+  // speed tiers use the whole seconds the clock shows: <=5:00 40, <6:00 30, <7:00 20, <8:00 10, else 0 (checked at every boundary)
+  [[1, 40], [299.9, 40], [300, 40], [300.99, 40], [301, 30], [359.99, 30], [360, 20], [419.99, 20], [420, 10], [479.99, 10], [480, 0], [900, 0]]
+    .forEach(([sec, pts]) => assert.equal(Core.score(st, sec).time, pts, sec + "s"));
 });
 
-test("mistakes bite: 3 wrong blocks drop a perfect fast run from 100 to 91; spamming bottoms out", () => {
+test("penalties: wrong block -4, crash -1; spamming bottoms out", () => {
   const st = Core.createState("A");
   for (let i = 0; i < 6; i++) {
     st.stage = i;
@@ -94,10 +94,16 @@ test("mistakes bite: 3 wrong blocks drop a perfect fast run from 100 to 91; spam
   }
   st.finished = 1;
   assert.equal(Core.score(st, 240).total, 100);
+  st.stagePoints[2].mistakes = 1;
+  assert.equal(Core.score(st, 240).total, 96);
   st.stagePoints[2].mistakes = 3;
-  assert.equal(Core.score(st, 240).total, 91);
-  st.stagePoints[2].mistakes = 7;
-  assert.equal(Core.score(st, 240).code, 39);
+  assert.equal(Core.score(st, 240).total, 88);
+  st.runs.push({ level: 1, distance: 320, coins: 0, crashes: 5 });
+  assert.equal(Core.score(st, 240).crashLoss, 5);
+  assert.equal(Core.score(st, 240).total, 83);
+  st.runs.length = 0;
+  st.stagePoints[2].mistakes = 15;
+  assert.equal(Core.score(st, 240).code, 0);
   st.stagePoints[2].mistakes = 500;
   assert.equal(Core.score(st, 240).code, 0);
   st.runs.push({ level: 1, distance: 1, coins: 50, crashes: 0 });
@@ -106,7 +112,7 @@ test("mistakes bite: 3 wrong blocks drop a perfect fast run from 100 to 91; spam
 
 test("each wrong block costs exactly the mistake penalty", () => {
   const st = Core.createState("A");
-  ["h1", "p", "game", "bot", "btn"].forEach((id) => Core.place(st, id));
+  for (let i = 0; i < 6; i++) { st.stage = i; Core.stageSlots(i).forEach(() => Core.place(st, Core.nextHint(st).tile)); }
   const clean = Core.score(st, 0).total;
   st.stagePoints[1].mistakes = 3;
   assert.equal(Core.score(st, 0).total, clean - 3 * Core.POINTS.mistake);
