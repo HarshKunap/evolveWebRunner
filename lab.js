@@ -6,7 +6,7 @@
   const Core = window.EVOLVE_LAB_CORE;
   const RUNTIME_SRC = window.EVOLVE_RUNTIME_SRC;
   const { STAGES, FILES, SLOTS, ASSETS } = C;
-  const BOARD_KEY = "evolve-lab-leaderboard-v5";   // v4: 60 code + 40 speed + coin bonus
+  const BOARD_KEY = "evolve-lab-leaderboard-v6";   // v4: 60 code + 40 speed + coin bonus
   const IDLE_NUDGE_MS = 25000;
 
   const $ = (id) => document.getElementById(id);
@@ -21,7 +21,8 @@
     console: $("dt-console"), network: $("dt-network"), netCount: $("net-count"),
     intro: $("intro"), introPath: $("intro-path"), name: $("player-name"), start: $("start-btn"),
     results: $("results"), resUrl: $("res-url"), resStats: $("res-stats"), resStack: $("res-stack"), board: $("leaderboard"),
-    again: $("again-btn"), view: $("view-btn"), toast: $("toast"), more: $("more-blocks")
+    again: $("again-btn"), view: $("view-btn"), toast: $("toast"), more: $("more-blocks"),
+    resCode: $("res-code"), resCodeScore: $("res-code-score"), copyCode: $("copy-code")
   };
 
   let state = null;
@@ -31,6 +32,7 @@
   let clockTimer = 0, idleTimer = 0, previewTimer = 0, toastTimer = 0;
   let netCount = 0;
   let levelProgress = null;
+  let lastWrong = { tile: null, at: 0 }, lastHintAt = 0;
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // ---------- helpers ----------
@@ -276,6 +278,11 @@
         focusSlot(res.slot);
         return;
       }
+      // an accidental double-click on the same wrong block only costs once
+      const nowMs = performance.now();
+      const repeat = lastWrong.tile === tileId && nowMs - lastWrong.at < 500;
+      lastWrong = { tile: tileId, at: nowMs };
+      if (repeat) { focusSlot(res.slot); return; }
       state.mistakes += 1;
       state.stagePoints[state.stage].mistakes += 1;
       feedback("<b>✗ −" + Core.POINTS.mistake + (Core.POINTS.mistake === 1 ? " point." : " points.") + "</b> " + esc(res.why || "It doesn't belong here."), "bad");
@@ -308,6 +315,9 @@
     const h = Core.nextHint(state);
     if (!h) return;
     if (paid) {
+      const nowMs = performance.now();
+      if (nowMs - lastHintAt < 500) return;          // double-click on Hint only costs once
+      lastHintAt = nowMs;
       state.hints += 1;
       state.stagePoints[state.stage].hints += 1;
       updateScore();
@@ -348,7 +358,7 @@
     if (x && mode === "build") {
       Core.removeFill(state, x.dataset.slot);
       feedback("Block removed. Pick another.", "info");
-      renderBuild(); schedulePreview(); markIdle();
+      renderBuild(); schedulePreview(); markIdle(); updateScore();
       return;
     }
     const slot = e.target.closest(".slot");
@@ -579,7 +589,7 @@
       ["CODE", sc.code + " / " + P.codeMax, sc.filled + " lines · " + sc.mistakes + " wrong · " + sc.hints + " hints"],
       ["SPEED", "+" + sc.time + " / " + P.timeMax, "≤5:00 +40 · <6:00 +30 · <7:00 +20 · <8:00 +10"],
       ["PLAY", (sc.coins - sc.crashLoss >= 0 ? "+" : "−") + Math.abs(sc.coins - sc.crashLoss), "+" + sc.coins + " coins (max " + P.coinMax + ") · −" + sc.crashLoss + " for " + sc.crashes + " crash" + (sc.crashes === 1 ? "" : "es")],
-      ["TOTAL", sc.total + " / " + P.max, "capped at " + P.max]
+      ["TOTAL", sc.total + " / " + P.max, "max " + P.max]
     ].map((r, i) => '<div class="' + (r[0] === "TOTAL" ? "total" : "") + '"><span>' + r[0] + "</span><strong>" + r[1] + "</strong>" +
       (r[2] ? "<small>" + r[2] + "</small>" : "") + "</div>").join("");
     el.resStack.innerHTML = STAGES.map((s, i) => {
@@ -589,11 +599,36 @@
     }).join("");
     el.board.innerHTML = list.map((x) => '<li class="' + (x.createdAt === entry.createdAt ? "me" : "") + '"><span>' + esc(x.name) + "</span><b>" +
       Number(x.score) + "</b><small>" + fmt(x.time) + "</small></li>").join("");
+    // Score code for the organisers' site (score is always an integer 0-100 here)
+    const finalScore = Math.max(0, Math.min(P.max, Math.round(sc.total)));
+    el.resCode.textContent = Core.encryptScore(finalScore);
+    el.resCodeScore.textContent = finalScore;
+    el.copyCode.textContent = "Copy code";
+    el.copyCode.classList.remove("copied");
     el.results.hidden = false;
     renderStepper();
     updateScore();
     el.again.focus({ preventScroll: true });
   }
+  function copied(ok) {
+    el.copyCode.textContent = ok ? "Copied ✓" : "Select & copy";
+    el.copyCode.classList.toggle("copied", ok);
+  }
+  el.copyCode.addEventListener("click", () => {
+    const code = el.resCode.textContent;
+    const fallback = () => {
+      // Select the code so the player can press Ctrl+C, and try the legacy copy command.
+      const range = document.createRange(); range.selectNodeContents(el.resCode);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      copied(ok);
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => copied(true), fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+  });
+
   el.view.addEventListener("click", () => {
     el.results.hidden = true;
     el.next.disabled = false;

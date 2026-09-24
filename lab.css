@@ -235,12 +235,19 @@ body.dragging .slot { border-color: #6a7cc0; color: #aab6de; }
 .res-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
 .res-stats div { padding: 10px 12px; border-radius: 12px; background: #fff; }
 .res-stats span { display: block; font: 700 10px var(--mono); letter-spacing: .14em; color: #6a7088; }
-.res-stats strong { font: 700 20px var(--mono); }
+.res-stats strong { font: 700 clamp(15px, 1.5vw, 20px) var(--mono); white-space: nowrap; }
 .res-stats small { display: block; margin-top: 2px; font: 11px var(--mono); color: #6a7088; }
 .res-stats .total small { color: #aab3cc; }
 .res-stats .total { background: #0a1021; color: #fff; }
 .res-stats .total strong { color: var(--gold); }
 .results-main .panel-head span, .results-side .panel-head span { color: #6a7088; }
+.score-code { display: flex; align-items: center; gap: 16px; margin: -6px 0 18px; padding: 12px 16px; border-radius: 12px; background: #0a1021; color: #fff; }
+.score-code-main { flex: 1; min-width: 0; }
+.score-code-main span { display: block; font: 700 10px var(--mono); letter-spacing: .16em; color: #aab3cc; }
+.score-code-main strong { display: block; margin: 2px 0; font: 800 30px var(--mono); letter-spacing: .28em; color: var(--gold); user-select: all; }
+.score-code-main small { color: #aab3cc; font-size: 12px; }
+.score-code-main small b { color: #fff; }
+#copy-code.copied { background: var(--green); color: #06210f; }
 .res-stack { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin: 0 0 20px; padding: 0; list-style: none; }
 .res-stack li { padding: 7px 10px; border-left: 4px solid var(--tech); background: #fff; border-radius: 6px; font-size: 13px; }
 .res-stack b { margin-right: 6px; }

@@ -49,9 +49,16 @@ For rehearsals, `http://localhost:8765/?test=1` exposes `window.EVOLVE_LAB` debu
 - **Code: up to 60.** Everyone starts at **0**. Each correct line adds points (all 27 lines = 60). A wrong block (decoy or out of order) costs **−4**, a paid hint **−2**. Penalties stay owed (the code score never shows below 0). Changing a choice you already made is free.
 - **Speed: up to 40.** Added when you finish: **5:00 or less = 40**, under 6:00 = 30, under 7:00 = 20, under 8:00 = 10, 8:00 or more = 0. Shown next to the finish time on the results screen.
 - **Coins: up to +10.** Levels 2–4 have floating **+2** coins; jump to grab them. The coin bonus is capped at +10.
-- **Crashes: −1 each.** Hitting a block in any level costs 1 point.
-- **Total = code + speed + coins − crashes**, between 0 and 100. The local leaderboard (`localStorage`) ranks by score, then faster time.
+- **Crashes: −3 each.** Hitting a block in any level costs 3 points.
+- **Total = code + speed + coins − crashes**, strictly between 0 and 100 (hard-capped; never shown above 100). The local leaderboard (`localStorage`) ranks by score, then faster time.
 - **Clear the leaderboard** (e.g. after test runs on the event laptop): open the site with `?reset=1` at the end of the address.
+
+## Score code
+
+The results screen shows a **6-character score code** (e.g. `2X9A7M` = 100) with a Copy button, for players to paste into the organisers' score site.
+`encryptScore()` in `lab-core.js` implements the shared spec: `v = score × 381001 + 98765`, then 6 base-36 digits of `v`, each shifted by `(98765 + position) mod 36` and mapped to `0-9A-Z`. BigInt is used throughout. `decryptScore()` is the exact inverse (used by the tests).
+
+Note: the code is produced in the browser, so someone with developer tools could generate a code by hand. It's fine for a fun leaderboard, not for anything high-stakes.
 
 ## Customise
 

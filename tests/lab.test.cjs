@@ -99,8 +99,8 @@ test("penalties: wrong block -4, crash -1; spamming bottoms out", () => {
   st.stagePoints[2].mistakes = 3;
   assert.equal(Core.score(st, 240).total, 88);
   st.runs.push({ level: 1, distance: 320, coins: 0, crashes: 5 });
-  assert.equal(Core.score(st, 240).crashLoss, 5);
-  assert.equal(Core.score(st, 240).total, 83);
+  assert.equal(Core.score(st, 240).crashLoss, 15);                     // crash = -3
+  assert.equal(Core.score(st, 240).total, 73);
   st.runs.length = 0;
   st.stagePoints[2].mistakes = 15;
   assert.equal(Core.score(st, 240).code, 0);
@@ -124,6 +124,34 @@ test("removing and re-adding a block does not change the score", () => {
   const once = Core.score(st, 0).total;
   for (let i = 0; i < 5; i++) { Core.removeFill(st, "heading"); Core.place(st, "h1"); }
   assert.equal(Core.score(st, 0).total, once);
+});
+
+test("100 is a strict maximum: perfect build + fastest time + every coin never exceeds 100", () => {
+  const st = Core.createState("A");
+  for (let i = 0; i < 6; i++) { st.stage = i; Core.stageSlots(i).forEach(() => Core.place(st, Core.nextHint(st).tile)); }
+  st.runs.push({ level: 2, distance: 420, coins: 40, crashes: 0 });
+  st.finished = 1;
+  assert.equal(Core.score(st, 1).total, 100);
+  for (let c = 0; c <= 20; c++) {
+    st.runs[0].crashes = c;
+    const t = Core.score(st, 1).total;
+    assert.ok(Number.isInteger(t) && t >= 0 && t <= 100, "crashes " + c + " -> " + t);
+  }
+});
+
+test("score code: matches the spec's known values, 6 chars, reversible and unique for 0-100", () => {
+  assert.equal(Core.encryptScore(0), "YPNMLM");
+  assert.equal(Core.encryptScore(50), "0TYYWM");
+  assert.equal(Core.encryptScore(100), "2X9A7M");
+  const seen = new Set();
+  for (let s = 0; s <= 100; s++) {
+    const code = Core.encryptScore(s);
+    assert.match(code, /^[0-9A-Z]{6}$/);
+    assert.equal(Core.decryptScore(code), s);
+    seen.add(code);
+  }
+  assert.equal(seen.size, 101);
+  [-1, 101, 50.5, NaN, "50"].forEach((bad) => assert.throws(() => Core.encryptScore(bad), /between 0 and 100/));
 });
 
 test("leaderboard orders by score then faster time", () => {

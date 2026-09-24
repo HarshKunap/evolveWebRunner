@@ -8,10 +8,10 @@
   // Score out of 100: up to 60 for the code (accuracy), up to 40 for speed.
   // Code starts at 0 and climbs as lines are filled (all 27 lines = 60). Mistakes/hints subtract (floors at 0).
   // Speed (added when you finish): 5:00 or less = 40, under 6:00 = 30, under 7:00 = 20, under 8:00 = 10, else 0.
-  // Wrong block −4, paid hint −2, crash in a level −1. Coins in levels: +2 each, bonus capped at +10. Total capped at 100.
+  // Wrong block −4, paid hint −2, crash in a level −3. Coins in levels: +2 each, bonus capped at +10. Total capped at 100.
   const POINTS = { max: 100, codeMax: 60, timeMax: 40, mistake: 4, hint: 2,
     speedTiers: [[300, 40, true], [360, 30], [420, 20], [480, 10]],   // [seconds, points, inclusive?]
-    coin: 2, coinMax: 10, crash: 1, perMetre: 1 };
+    coin: 2, coinMax: 10, crash: 3, perMetre: 1 };
 
   function cleanName(name) {
     const n = String(name || "").replace(/[<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
@@ -206,6 +206,41 @@
     return { code, time, coins, coinsGot, crashes, crashLoss, mistakes, hints, filled, total };
   }
 
+  // ---------- Score code (shared with the organisers' decryption site) ----------
+  // Encrypts an integer score 0..100 into a fixed 6-character base-36 code.
+  // BigInt keeps every step exact (no 32-bit overflow); modulo is normalised to be non-negative.
+  const CODE = { CHARSET: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", PRIME: 381001n, SECRET_KEY: 98765n, LENGTH: 6 };
+  const mod = (a, m) => ((a % m) + m) % m;
+
+  function encryptScore(score) {
+    if (!Number.isInteger(score) || score < 0 || score > 100) throw new RangeError("Score must be between 0 and 100");
+    const base = BigInt(CODE.CHARSET.length);                       // 36
+    const v = BigInt(score) * CODE.PRIME + CODE.SECRET_KEY;
+    let power = 1n, out = "";
+    for (let i = 0; i < CODE.LENGTH; i++) {
+      const d = mod(v / power, base);                                // BigInt division truncates (v is positive)
+      const c = mod(d + CODE.SECRET_KEY + BigInt(i), base);
+      out += CODE.CHARSET[Number(c)];
+      power *= base;
+    }
+    return out;
+  }
+
+  // Inverse, used only by the tests to prove the code is reversible.
+  function decryptScore(code) {
+    const base = BigInt(CODE.CHARSET.length);
+    let v = 0n, power = 1n;
+    for (let i = 0; i < CODE.LENGTH; i++) {
+      const c = BigInt(CODE.CHARSET.indexOf(code[i]));
+      if (c < 0n) throw new Error("bad character");
+      v += mod(c - CODE.SECRET_KEY - BigInt(i), base) * power;
+      power *= base;
+    }
+    const s = v - CODE.SECRET_KEY;
+    if (s < 0n || s % CODE.PRIME !== 0n) throw new Error("invalid code");
+    return Number(s / CODE.PRIME);
+  }
+
   function compareEntries(a, b) {
     if (a.score !== b.score) return b.score - a.score;
     if (a.time !== b.time) return a.time - b.time;
@@ -213,7 +248,7 @@
   }
 
   const api = { POINTS, cleanName, createState, tileById, stageSlots, currentSlot, isStageComplete, place, removeFill, nextHint,
-    fileLines, fileText, visibleFiles, runtimeConfig, buildDocument, runPoints, score, timeBonus, TOTAL_SLOTS, compareEntries, chosen };
+    fileLines, fileText, visibleFiles, runtimeConfig, buildDocument, runPoints, score, timeBonus, TOTAL_SLOTS, encryptScore, decryptScore, CODE, compareEntries, chosen };
   root.EVOLVE_LAB_CORE = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);
