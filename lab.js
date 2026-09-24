@@ -544,7 +544,7 @@
   }
   function tick() {
     el.clock.textContent = fmt(elapsed());
-    el.clock.classList.toggle("over", elapsed() > 300);
+    el.clock.classList.toggle("over", elapsed() >= 420);
   }
 
   // ---------- leaderboard ----------
@@ -591,7 +591,7 @@
     el.resStats.innerHTML = [
       ["FINISH TIME", fmt(secs), "+" + sc.time + " speed pts"],
       ["CODE", (sc.code < 0 ? "−" : "") + Math.abs(sc.code) + " / " + P.codeMax, "+" + sc.lines + " for " + sc.filled + " lines · " + sc.mistakes + " wrong (" + signed(sc.mistakePts) + ") · " + sc.hints + " hints (" + signed(sc.hintPts) + ")"],
-      ["SPEED", "+" + sc.time + " / " + P.timeMax, "≤5:00 +40 · <6:00 +30 · <7:00 +20 · <8:00 +10"],
+      ["SPEED", "+" + sc.time + " / " + P.timeMax, "<7:00 +40 · <8:00 +30 · <9:00 +20 · <10:00 +10"],
       ["PLAY", (sc.play >= 0 ? "+" : "−") + Math.abs(sc.play), "+" + sc.coins + " coins (max " + P.coinMax + ") · −" + sc.crashLoss + " for " + sc.crashes + " crash" + (sc.crashes === 1 ? "" : "es")],
       ["TOTAL", sc.total + " / " + P.max, "always 0 – " + P.max]
     ].map((r, i) => '<div class="' + (r[0] === "TOTAL" ? "total" : "") + '"><span>' + r[0] + "</span><strong>" + r[1] + "</strong>" +

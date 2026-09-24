@@ -74,18 +74,18 @@ function buildAll(st) {
   }
 }
 
-test("scoring constants: 60 code, 40 speed, -4 wrong, -2 hint, +2 coin (max +10), -3 crash", () => {
+test("scoring constants: 60 code, 40 speed, -4 wrong, -2 hint, +2 coin (max +10), -1 crash", () => {
   const P = Core.POINTS;
-  assert.deepEqual([P.codeMax, P.timeMax, P.mistake, P.hint, P.coin, P.coinMax, P.crash, P.max], [60, 40, 4, 2, 2, 10, 3, 100]);
+  assert.deepEqual([P.codeMax, P.timeMax, P.mistake, P.hint, P.coin, P.coinMax, P.crash, P.max], [60, 40, 4, 2, 2, 10, 1, 100]);
 });
 
-test("all 27 lines pay exactly 60; a perfect build under 5:00 scores exactly 100", () => {
+test("all 27 lines pay exactly 60; a perfect build under 7:00 scores exactly 100", () => {
   const st = Core.createState("A");
   assert.equal(Core.score(st).total, 0);
   buildAll(st);
   assert.equal(Core.score(st).total, 60);
   assert.equal(Core.score(st).filled, 27);
-  Core.recordFinish(st, 299);
+  Core.recordFinish(st, 419);
   assert.equal(Core.score(st).total, 100);
   assert.equal(Core.recordFinish(st, 1), 0);                 // speed can only be awarded once
 });
@@ -124,17 +124,17 @@ test("the score never leaves 0..100 under thousands of random events", () => {
   }
 });
 
-test("penalties when you have points: wrong -4, hint -2, crash -3; coins +2 up to +10", () => {
+test("penalties when you have points: wrong -4, hint -2, crash -1; coins +2 up to +10", () => {
   const st = Core.createState("A");
   buildAll(st);                                              // 60
   assert.equal(Core.recordMistake(st), -4);
   assert.equal(Core.recordHint(st), -2);
-  assert.equal(Core.recordCrash(st), -3);
-  assert.equal(Core.score(st).total, 51);
+  assert.equal(Core.recordCrash(st), -1);
+  assert.equal(Core.score(st).total, 53);
   for (let c = 0; c < 8; c++) Core.recordCoin(st);           // 8 coins but only +10
   assert.equal(Core.score(st).coins, 10);
   assert.equal(Core.score(st).coinsGot, 8);
-  assert.equal(Core.score(st).total, 61);
+  assert.equal(Core.score(st).total, 63);
 });
 
 test("100 is a hard ceiling: a perfect fast run plus every coin stays at 100", () => {
@@ -156,7 +156,7 @@ test("removing and re-adding a line never pays twice", () => {
 });
 
 test("speed tiers use the whole seconds the clock shows", () => {
-  [[1, 40], [299.9, 40], [300, 40], [300.99, 40], [301, 30], [359.99, 30], [360, 20], [419.99, 20], [420, 10], [479.99, 10], [480, 0], [900, 0]]
+  [[1, 40], [300, 40], [419, 40], [419.99, 40], [420, 30], [479.99, 30], [480, 20], [539.99, 20], [540, 10], [599.99, 10], [600, 0], [900, 0]]
     .forEach(([sec, pts]) => assert.equal(Core.timeBonus(sec), pts, sec + "s"));
 });
 

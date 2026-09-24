@@ -233,7 +233,7 @@
       brief: "JavaScript says WHAT HAPPENS: when you click, when you press a key, every frame. Wire up the loop, the obstacles, the controls and the Play button.",
       ship: "Save game.js",
       after: "The page reacts now! JS creates <div class=\"block\"> obstacles, moves them, and listens to your keyboard.",
-      tryIt: "Press SPACE (or click ▶ Play) to start. Jump the blocks and reach the goal to unlock the next layer. Each crash costs 3 points.",
+      tryIt: "Press SPACE (or click ▶ Play) to start. Jump the blocks and reach the goal to unlock the next layer. Each crash costs 1 point.",
       play: { level: 1, goal: 320, speed: 300, spawnMs: 1500, labels: ["<div>", "<p>", "404", "<br>", "<img>"] },
       tiles: [
         { id: "raf", group: "loop", code: "requestAnimationFrame(loop);", lesson: "Asks the browser to run loop() again before the next repaint, about 60 times a second." },

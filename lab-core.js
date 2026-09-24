@@ -8,11 +8,11 @@
   // Score out of 100: up to 60 for the code (accuracy), up to 40 for speed.
   // Code starts at 0 and climbs as lines are filled (all 27 lines = 60). Mistakes/hints subtract (floors at 0).
   // Score never leaves 0..100: every event is clamped as it happens (no hidden debt, no overflow).
-  // Speed (added when you finish): 5:00 or less = 40, under 6:00 = 30, under 7:00 = 20, under 8:00 = 10, else 0.
-  // Wrong block −4, paid hint −2, crash in a level −3. Coins in levels: +2 each, bonus capped at +10. Total capped at 100.
+  // Speed (added when you finish): under 7:00 = 40, under 8:00 = 30, under 9:00 = 20, under 10:00 = 10, 10:00+ = 0.
+  // Wrong block −4, paid hint −2, crash in a level −1. Coins in levels: +2 each, bonus capped at +10. Total capped at 100.
   const POINTS = { max: 100, codeMax: 60, timeMax: 40, mistake: 4, hint: 2,
-    speedTiers: [[300, 40, true], [360, 30], [420, 20], [480, 10]],   // [seconds, points, inclusive?]
-    coin: 2, coinMax: 10, crash: 3, perMetre: 1 };
+    speedTiers: [[420, 40], [480, 30], [540, 20], [600, 10]],   // [finish under this many seconds, points]
+    coin: 2, coinMax: 10, crash: 1, perMetre: 1 };
 
   function cleanName(name) {
     const n = String(name || "").replace(/[<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 16);
@@ -188,12 +188,10 @@
 
   const TOTAL_SLOTS = STAGES.reduce((n, _s, i) => n + stageSlots(i).length, 0);
 
-  // Uses whole seconds, exactly what the clock shows (5:00.9 reads "5:00" and scores as 5:00).
+  // Uses whole seconds, exactly what the clock shows (6:59.9 reads "6:59", so it still counts as under 7:00).
   function timeBonus(seconds) {
     seconds = Math.floor(seconds);
-    for (const [limit, pts, inclusive] of POINTS.speedTiers) {
-      if (inclusive ? seconds <= limit : seconds < limit) return pts;
-    }
+    for (const [limit, pts] of POINTS.speedTiers) if (seconds < limit) return pts;
     return 0;
   }
 
