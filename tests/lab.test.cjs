@@ -66,77 +66,98 @@ test("names are sanitised so they cannot inject markup", () => {
   assert.equal(Core.cleanName(""), "WEB DEV");
 });
 
-test("scoring: code climbs 0-60, speed up to 40, coins +2 each (max +10), total capped at 100", () => {
-  const P = Core.POINTS;
-  assert.equal(P.codeMax, 60); assert.equal(P.timeMax, 40); assert.equal(P.coin, 2); assert.equal(P.coinMax, 10);
-  const st = Core.createState("A");
-  assert.equal(Core.score(st, 100).total, 0);
-  ["h1", "p", "game", "bot", "btn"].forEach((id) => Core.place(st, id));
-  const base = Math.round(60 * 5 / Core.TOTAL_SLOTS);
-  assert.equal(Core.score(st, 100).code, base);
-  st.stagePoints[0].mistakes = 1; st.stagePoints[0].hints = 1;
-  assert.equal(Core.score(st, 100).code, Math.max(0, base - 4 - 2));
-  st.runs.push({ level: 1, distance: 320, coins: 3, crashes: 0 });
-  assert.equal(Core.score(st, 100).coins, 6);
-  st.runs.push({ level: 2, distance: 420, coins: 9, crashes: 0 });
-  assert.equal(Core.score(st, 100).coins, 10);                       // capped
-  st.finished = 1;
-  // speed tiers use the whole seconds the clock shows: <=5:00 40, <6:00 30, <7:00 20, <8:00 10, else 0 (checked at every boundary)
-  [[1, 40], [299.9, 40], [300, 40], [300.99, 40], [301, 30], [359.99, 30], [360, 20], [419.99, 20], [420, 10], [479.99, 10], [480, 0], [900, 0]]
-    .forEach(([sec, pts]) => assert.equal(Core.score(st, sec).time, pts, sec + "s"));
-});
-
-test("penalties: wrong block -4, crash -1; spamming bottoms out", () => {
-  const st = Core.createState("A");
+// helper: fill every line of every layer in order through the same calls the UI makes
+function buildAll(st) {
   for (let i = 0; i < 6; i++) {
     st.stage = i;
-    Core.stageSlots(i).forEach(() => { const h = Core.nextHint(st); Core.place(st, h.tile); });
+    Core.stageSlots(i).forEach(() => { const h = Core.nextHint(st); const r = Core.place(st, h.tile); Core.awardLine(st, r.slot); });
   }
-  st.finished = 1;
-  assert.equal(Core.score(st, 240).total, 100);
-  st.stagePoints[2].mistakes = 1;
-  assert.equal(Core.score(st, 240).total, 96);
-  st.stagePoints[2].mistakes = 3;
-  assert.equal(Core.score(st, 240).total, 88);
-  st.runs.push({ level: 1, distance: 320, coins: 0, crashes: 5 });
-  assert.equal(Core.score(st, 240).crashLoss, 15);                     // crash = -3
-  assert.equal(Core.score(st, 240).total, 73);
-  st.runs.length = 0;
-  st.stagePoints[2].mistakes = 15;
-  assert.equal(Core.score(st, 240).code, 0);
-  st.stagePoints[2].mistakes = 500;
-  assert.equal(Core.score(st, 240).code, 0);
-  st.runs.push({ level: 1, distance: 1, coins: 50, crashes: 0 });
-  assert.ok(Core.score(st, 240).total <= 100);
+}
+
+test("scoring constants: 60 code, 40 speed, -4 wrong, -2 hint, +2 coin (max +10), -3 crash", () => {
+  const P = Core.POINTS;
+  assert.deepEqual([P.codeMax, P.timeMax, P.mistake, P.hint, P.coin, P.coinMax, P.crash, P.max], [60, 40, 4, 2, 2, 10, 3, 100]);
 });
 
-test("each wrong block costs exactly the mistake penalty", () => {
+test("all 27 lines pay exactly 60; a perfect build under 5:00 scores exactly 100", () => {
   const st = Core.createState("A");
-  for (let i = 0; i < 6; i++) { st.stage = i; Core.stageSlots(i).forEach(() => Core.place(st, Core.nextHint(st).tile)); }
-  const clean = Core.score(st, 0).total;
-  st.stagePoints[1].mistakes = 3;
-  assert.equal(Core.score(st, 0).total, clean - 3 * Core.POINTS.mistake);
+  assert.equal(Core.score(st).total, 0);
+  buildAll(st);
+  assert.equal(Core.score(st).total, 60);
+  assert.equal(Core.score(st).filled, 27);
+  Core.recordFinish(st, 299);
+  assert.equal(Core.score(st).total, 100);
+  assert.equal(Core.recordFinish(st, 1), 0);                 // speed can only be awarded once
 });
 
-test("removing and re-adding a block does not change the score", () => {
+test("0 is a hard floor: a mistake, hint or crash at 0 costs nothing and leaves no hidden debt", () => {
   const st = Core.createState("A");
-  Core.place(st, "h1");
-  const once = Core.score(st, 0).total;
-  for (let i = 0; i < 5; i++) { Core.removeFill(st, "heading"); Core.place(st, "h1"); }
-  assert.equal(Core.score(st, 0).total, once);
+  assert.equal(Core.recordMistake(st), 0);
+  assert.equal(Core.recordHint(st), 0);
+  assert.equal(Core.recordCrash(st), 0);
+  assert.equal(Core.score(st).total, 0);
+  Core.place(st, "h1"); const gained = Core.awardLine(st, "heading");
+  assert.ok(gained > 0);
+  assert.equal(Core.score(st).total, gained);               // next correct line raises the score straight away
+  assert.equal(Core.recordMistake(st), -gained);            // only what exists can be taken
+  assert.equal(Core.score(st).total, 0);
 });
 
-test("100 is a strict maximum: perfect build + fastest time + every coin never exceeds 100", () => {
-  const st = Core.createState("A");
-  for (let i = 0; i < 6; i++) { st.stage = i; Core.stageSlots(i).forEach(() => Core.place(st, Core.nextHint(st).tile)); }
-  st.runs.push({ level: 2, distance: 420, coins: 40, crashes: 0 });
-  st.finished = 1;
-  assert.equal(Core.score(st, 1).total, 100);
-  for (let c = 0; c <= 20; c++) {
-    st.runs[0].crashes = c;
-    const t = Core.score(st, 1).total;
-    assert.ok(Number.isInteger(t) && t >= 0 && t <= 100, "crashes " + c + " -> " + t);
+test("the score never leaves 0..100 under thousands of random events", () => {
+  let seed = 42; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let run = 0; run < 300; run++) {
+    const st = Core.createState("R");
+    const slots = []; for (let i = 0; i < 6; i++) slots.push(...Core.stageSlots(i));
+    for (let k = 0; k < 120; k++) {
+      const r = rnd();
+      if (r < 0.3) Core.awardLine(st, slots[Math.floor(rnd() * slots.length)]);
+      else if (r < 0.5) Core.recordMistake(st);
+      else if (r < 0.6) Core.recordHint(st);
+      else if (r < 0.8) Core.recordCoin(st);
+      else if (r < 0.95) Core.recordCrash(st);
+      else Core.recordFinish(st, rnd() * 700);
+      const sc = Core.score(st);
+      assert.ok(Number.isInteger(sc.total) && sc.total >= 0 && sc.total <= 100, "total " + sc.total);
+      assert.equal(sc.code + sc.time + sc.play, sc.total);     // the result cards always add up exactly
+      assert.ok(sc.coins <= 10);
+    }
   }
+});
+
+test("penalties when you have points: wrong -4, hint -2, crash -3; coins +2 up to +10", () => {
+  const st = Core.createState("A");
+  buildAll(st);                                              // 60
+  assert.equal(Core.recordMistake(st), -4);
+  assert.equal(Core.recordHint(st), -2);
+  assert.equal(Core.recordCrash(st), -3);
+  assert.equal(Core.score(st).total, 51);
+  for (let c = 0; c < 8; c++) Core.recordCoin(st);           // 8 coins but only +10
+  assert.equal(Core.score(st).coins, 10);
+  assert.equal(Core.score(st).coinsGot, 8);
+  assert.equal(Core.score(st).total, 61);
+});
+
+test("100 is a hard ceiling: a perfect fast run plus every coin stays at 100", () => {
+  const st = Core.createState("A");
+  buildAll(st);
+  for (let c = 0; c < 5; c++) Core.recordCoin(st);           // 70
+  Core.recordFinish(st, 100);                                // +40 would be 110
+  const sc = Core.score(st);
+  assert.equal(sc.total, 100);
+  assert.equal(sc.code + sc.time + sc.play, 100);
+});
+
+test("removing and re-adding a line never pays twice", () => {
+  const st = Core.createState("A");
+  Core.place(st, "h1"); Core.awardLine(st, "heading");
+  const once = Core.score(st).total;
+  for (let i = 0; i < 5; i++) { Core.removeFill(st, "heading"); Core.place(st, "h1"); Core.awardLine(st, "heading"); }
+  assert.equal(Core.score(st).total, once);
+});
+
+test("speed tiers use the whole seconds the clock shows", () => {
+  [[1, 40], [299.9, 40], [300, 40], [300.99, 40], [301, 30], [359.99, 30], [360, 20], [419.99, 20], [420, 10], [479.99, 10], [480, 0], [900, 0]]
+    .forEach(([sec, pts]) => assert.equal(Core.timeBonus(sec), pts, sec + "s"));
 });
 
 test("score code: matches the spec's known values, 6 chars, reversible and unique for 0-100", () => {

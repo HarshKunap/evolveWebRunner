@@ -6,7 +6,7 @@
   const Core = window.EVOLVE_LAB_CORE;
   const RUNTIME_SRC = window.EVOLVE_RUNTIME_SRC;
   const { STAGES, FILES, SLOTS, ASSETS } = C;
-  const BOARD_KEY = "evolve-lab-leaderboard-v6";   // v4: 60 code + 40 speed + coin bonus
+  const BOARD_KEY = "evolve-lab-leaderboard-v7";   // v4: 60 code + 40 speed + coin bonus
   const IDLE_NUDGE_MS = 25000;
 
   const $ = (id) => document.getElementById(id);
@@ -61,6 +61,10 @@
     }
     return out + esc(text.slice(last));
   }
+
+  // "−4 points", "−1 point", or "no points lost (score is 0)" — always what was really deducted
+  function lossText(n) { return n > 0 ? "−" + n + (n === 1 ? " point" : " points") : "no points lost (score is 0)"; }
+  function signed(n) { return (n < 0 ? "−" : n > 0 ? "+" : "") + Math.abs(n); }
 
   function toast(text, kind) {
     el.toast.textContent = text;
@@ -283,11 +287,10 @@
       const repeat = lastWrong.tile === tileId && nowMs - lastWrong.at < 500;
       lastWrong = { tile: tileId, at: nowMs };
       if (repeat) { focusSlot(res.slot); return; }
-      state.mistakes += 1;
-      state.stagePoints[state.stage].mistakes += 1;
-      feedback("<b>✗ −" + Core.POINTS.mistake + (Core.POINTS.mistake === 1 ? " point." : " points.") + "</b> " + esc(res.why || "It doesn't belong here."), "bad");
-      toast("✗ −" + Core.POINTS.mistake + (Core.POINTS.mistake === 1 ? " point" : " points") + ": wrong block for this line", "bad");
-      consoleLog("Rejected: " + tile.code.replace("{NAME}", state.name) + " (−" + Core.POINTS.mistake + ")", "warn");
+      const lost = -Core.recordMistake(state);          // what was actually taken (never below 0)
+      feedback("<b>✗ " + lossText(lost) + ".</b> " + esc(res.why || "It doesn't belong here."), "bad");
+      toast("✗ " + lossText(lost) + ": wrong block for this line", "bad");
+      consoleLog("Rejected: " + tile.code.replace("{NAME}", state.name) + " (−" + lost + ")", "warn");
       if (btn && !reduceMotion) { btn.classList.remove("shake"); void btn.offsetWidth; btn.classList.add("shake"); }
       el.score.classList.remove("penalty"); void el.score.offsetWidth; el.score.classList.add("penalty");
       updateScore();
@@ -295,6 +298,7 @@
       return;
     }
     if (!res.same && !res.replaced) state.stagePoints[state.stage].slots += 1;
+    Core.awardLine(state, res.slot);                 // pays only the first time this line is filled
     feedback("<b>✓ " + (res.replaced ? "Swapped. " : "Added. ") + "</b>" + esc(tile.lesson), "good");
     const upNext = Core.currentSlot(state);
     activeFile = SLOTS[upNext || res.slot].file;
@@ -318,10 +322,9 @@
       const nowMs = performance.now();
       if (nowMs - lastHintAt < 500) return;          // double-click on Hint only costs once
       lastHintAt = nowMs;
-      state.hints += 1;
-      state.stagePoints[state.stage].hints += 1;
+      const hintLost = -Core.recordHint(state);
       updateScore();
-      feedback("<b>Hint:</b> this line needs " + esc(SLOTS[h.slot].hint) + ". The glowing block fits.", "info");
+      feedback("<b>Hint" + (hintLost ? " (−" + hintLost + ")" : "") + ":</b> this line needs " + esc(SLOTS[h.slot].hint) + ". The glowing block fits.", "info");
     }
     activeFile = SLOTS[h.slot].file;
     renderTabs(); renderCode();
@@ -453,6 +456,7 @@
       state.finished = performance.now();
       clearInterval(clockTimer);
       tick();
+      Core.recordFinish(state, elapsed());
     }
     levelProgress.distance = levelProgress.goal;
     renderLevel();
@@ -508,12 +512,12 @@
       toast(msg, "info");
     } else if (d.type === "progress" && levelProgress && mode === "play") {
       levelProgress.distance = d.distance; levelProgress.coins = d.coins; levelProgress.crashes = d.crashes; renderLevel();
-      const sc = Core.score(state, elapsed()), P = Core.POINTS;
-      const live = sc.code + sc.time + Math.min(P.coinMax, (sc.coinsGot + d.coins) * P.coin) - (sc.crashes + d.crashes) * P.crash;
-      el.score.textContent = Math.min(P.max, Math.max(0, live));
+      updateScore();
     } else if (d.type === "level-complete") levelComplete(d);
-    else if (d.type === "crash") {
-      toast("✗ −" + Core.POINTS.crash + (Core.POINTS.crash === 1 ? " point" : " points") + ": hit a block", "bad");
+    else if (d.type === "coin" && mode === "play") { Core.recordCoin(state); updateScore(); }
+    else if (d.type === "crash" && mode === "play") {
+      const crashLost = -Core.recordCrash(state); updateScore();
+      toast("✗ " + lossText(crashLost) + ": hit a block", "bad");
       if (!reduceMotion) {
         el.viewport.classList.remove("hit"); void el.viewport.offsetWidth; el.viewport.classList.add("hit");
         el.score.classList.remove("penalty"); void el.score.offsetWidth; el.score.classList.add("penalty");
@@ -536,7 +540,7 @@
   // ---------- score + clock ----------
   function updateScore() {
     if (!state) return;
-    el.score.textContent = Core.score(state, elapsed()).total;
+    el.score.textContent = Math.max(0, Math.min(Core.POINTS.max, state.points));
   }
   function tick() {
     el.clock.textContent = fmt(elapsed());
@@ -575,21 +579,21 @@
 
   function finish() {
     mode = "done";
-    if (!state.finished) state.finished = performance.now();
+    if (!state.finished) { state.finished = performance.now(); Core.recordFinish(state, elapsed()); }
     clearInterval(clockTimer);
     tick();
     const secs = elapsed();
-    const sc = Core.score(state, secs);
+    const sc = Core.score(state);
     const entry = { name: state.name, score: sc.total, time: Math.floor(secs), createdAt: Date.now() };
     const list = saveBoard(entry);
     el.resUrl.textContent = "https://" + slug(state.name) + ".evolve.dev";
     const P = Core.POINTS;
     el.resStats.innerHTML = [
       ["FINISH TIME", fmt(secs), "+" + sc.time + " speed pts"],
-      ["CODE", sc.code + " / " + P.codeMax, sc.filled + " lines · " + sc.mistakes + " wrong · " + sc.hints + " hints"],
+      ["CODE", (sc.code < 0 ? "−" : "") + Math.abs(sc.code) + " / " + P.codeMax, "+" + sc.lines + " for " + sc.filled + " lines · " + sc.mistakes + " wrong (" + signed(sc.mistakePts) + ") · " + sc.hints + " hints (" + signed(sc.hintPts) + ")"],
       ["SPEED", "+" + sc.time + " / " + P.timeMax, "≤5:00 +40 · <6:00 +30 · <7:00 +20 · <8:00 +10"],
-      ["PLAY", (sc.coins - sc.crashLoss >= 0 ? "+" : "−") + Math.abs(sc.coins - sc.crashLoss), "+" + sc.coins + " coins (max " + P.coinMax + ") · −" + sc.crashLoss + " for " + sc.crashes + " crash" + (sc.crashes === 1 ? "" : "es")],
-      ["TOTAL", sc.total + " / " + P.max, "max " + P.max]
+      ["PLAY", (sc.play >= 0 ? "+" : "−") + Math.abs(sc.play), "+" + sc.coins + " coins (max " + P.coinMax + ") · −" + sc.crashLoss + " for " + sc.crashes + " crash" + (sc.crashes === 1 ? "" : "es")],
+      ["TOTAL", sc.total + " / " + P.max, "always 0 – " + P.max]
     ].map((r, i) => '<div class="' + (r[0] === "TOTAL" ? "total" : "") + '"><span>' + r[0] + "</span><strong>" + r[1] + "</strong>" +
       (r[2] ? "<small>" + r[2] + "</small>" : "") + "</div>").join("");
     el.resStack.innerHTML = STAGES.map((s, i) => {

@@ -7,6 +7,7 @@
 
   // Score out of 100: up to 60 for the code (accuracy), up to 40 for speed.
   // Code starts at 0 and climbs as lines are filled (all 27 lines = 60). Mistakes/hints subtract (floors at 0).
+  // Score never leaves 0..100: every event is clamped as it happens (no hidden debt, no overflow).
   // Speed (added when you finish): 5:00 or less = 40, under 6:00 = 30, under 7:00 = 20, under 8:00 = 10, else 0.
   // Wrong block −4, paid hint −2, crash in a level −3. Coins in levels: +2 each, bonus capped at +10. Total capped at 100.
   const POINTS = { max: 100, codeMax: 60, timeMax: 40, mistake: 4, hint: 2,
@@ -24,10 +25,17 @@
       stage: 0,           // index into STAGES of the layer being built
       shipped: -1,        // highest shipped layer index
       fills: {},          // slotId -> tileId
-      mistakes: 0, hints: 0,
+      mistakes: 0, hints: 0, coinCount: 0, crashCount: 0,
       stagePoints: STAGES.map(() => ({ slots: 0, mistakes: 0, hints: 0 })),
-      runs: [],           // { level, distance, coins, crashes, points }
-      started: 0, finished: 0
+      runs: [],           // { level, distance, coins, crashes }
+      started: 0, finished: 0,
+      // Running score, clamped to 0..100 after EVERY event. tally holds what each kind of event
+      // actually added/removed, so the parts always add up exactly to the total.
+      points: 0,
+      tally: { lines: 0, mistakes: 0, hints: 0, coins: 0, crashes: 0, speed: 0 },
+      earned: {},         // slotId -> true once its line has paid out (re-adding never pays twice)
+      coinGross: 0,       // coin points credited so far (bonus capped at POINTS.coinMax)
+      speedDone: false
     };
   }
 
@@ -189,21 +197,57 @@
     return 0;
   }
 
-  function score(state, nowSeconds) {
-    const mistakes = state.stagePoints.reduce((sum, p) => sum + p.mistakes, 0);
-    const hints = state.stagePoints.reduce((sum, p) => sum + p.hints, 0);
-    // lines filled so far (removing and re-adding a block never earns twice)
-    let filled = 0;
-    for (let i = 0; i <= state.stage && i < STAGES.length; i++) filled += stageSlots(i).filter((id) => state.fills[id]).length;
-    const earned = Math.round(POINTS.codeMax * filled / TOTAL_SLOTS);
-    const code = Math.max(0, earned - mistakes * POINTS.mistake - hints * POINTS.hint);
-    const time = state.finished ? timeBonus(nowSeconds == null ? 0 : nowSeconds) : 0;
-    const coinsGot = state.runs.reduce((sum, r) => sum + (r.coins || 0), 0);
-    const coins = Math.min(POINTS.coinMax, coinsGot * POINTS.coin);
-    const crashes = state.runs.reduce((sum, r) => sum + (r.crashes || 0), 0);
-    const crashLoss = crashes * POINTS.crash;
-    const total = Math.min(POINTS.max, Math.max(0, code + time + coins - crashLoss));
-    return { code, time, coins, coinsGot, crashes, crashLoss, mistakes, hints, filled, total };
+  // Add delta to the running score, clamped to [0, max]. Returns what was actually applied.
+  function applyPoints(state, kind, delta) {
+    const raw = delta >= 0 ? Math.min(delta, POINTS.max - state.points) : -Math.min(-delta, state.points);
+    const applied = raw === 0 ? 0 : raw;                  // never return -0
+    state.points += applied;
+    state.tally[kind] += applied;
+    return applied;
+  }
+
+  // A line pays out the first time it is filled: all 27 lines together pay exactly 60.
+  function awardLine(state, slotId) {
+    if (!slotId || state.earned[slotId]) return 0;
+    state.earned[slotId] = true;
+    const k = Object.keys(state.earned).length;
+    const delta = Math.round(POINTS.codeMax * k / TOTAL_SLOTS) - Math.round(POINTS.codeMax * (k - 1) / TOTAL_SLOTS);
+    return applyPoints(state, "lines", delta);
+  }
+  function recordMistake(state) {
+    state.mistakes += 1; state.stagePoints[state.stage].mistakes += 1;
+    return applyPoints(state, "mistakes", -POINTS.mistake);
+  }
+  function recordHint(state) {
+    state.hints += 1; state.stagePoints[state.stage].hints += 1;
+    return applyPoints(state, "hints", -POINTS.hint);
+  }
+  function recordCoin(state) {
+    state.coinCount += 1;
+    const gross = Math.max(0, Math.min(POINTS.coin, POINTS.coinMax - state.coinGross));
+    state.coinGross += gross;
+    return applyPoints(state, "coins", gross);
+  }
+  function recordCrash(state) {
+    state.crashCount += 1;
+    return applyPoints(state, "crashes", -POINTS.crash);
+  }
+  function recordFinish(state, seconds) {
+    if (state.speedDone) return 0;
+    state.speedDone = true;
+    return applyPoints(state, "speed", timeBonus(seconds));
+  }
+
+  function score(state) {
+    const t = state.tally;
+    return {
+      total: state.points,
+      code: t.lines + t.mistakes + t.hints, lines: t.lines, mistakePts: t.mistakes, hintPts: t.hints,
+      time: t.speed,
+      play: t.coins + t.crashes, coins: t.coins, crashLoss: -t.crashes,
+      mistakes: state.mistakes, hints: state.hints, coinsGot: state.coinCount, crashes: state.crashCount,
+      filled: Object.keys(state.earned).length
+    };
   }
 
   // ---------- Score code (shared with the organisers' decryption site) ----------
@@ -248,7 +292,7 @@
   }
 
   const api = { POINTS, cleanName, createState, tileById, stageSlots, currentSlot, isStageComplete, place, removeFill, nextHint,
-    fileLines, fileText, visibleFiles, runtimeConfig, buildDocument, runPoints, score, timeBonus, TOTAL_SLOTS, encryptScore, decryptScore, CODE, compareEntries, chosen };
+    fileLines, fileText, visibleFiles, runtimeConfig, buildDocument, runPoints, score, timeBonus, TOTAL_SLOTS, applyPoints, awardLine, recordMistake, recordHint, recordCoin, recordCrash, recordFinish, encryptScore, decryptScore, CODE, compareEntries, chosen };
   root.EVOLVE_LAB_CORE = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);
